@@ -179,6 +179,11 @@ private fun SiteBrowser(site: VideoSite, onBack: () -> Unit) {
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
             settings.loadsImagesAutomatically = true
+            settings.useWideViewPort = true
+            settings.loadWithOverviewMode = true
+            settings.setSupportZoom(true)
+            settings.builtInZoomControls = true
+            settings.displayZoomControls = false
             settings.mediaPlaybackRequiresUserGesture = true
             settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
             settings.allowFileAccess = false
@@ -229,7 +234,6 @@ private fun SiteBrowser(site: VideoSite, onBack: () -> Unit) {
         ) {
             Button(
                 onClick = { if (webView.canGoBack()) webView.goBack() else onBack() },
-                enabled = canGoBack || true
             ) { Text("‹") }
             Spacer(Modifier.width(6.dp))
             Button(onClick = { if (webView.canGoForward()) webView.goForward() }, enabled = canGoForward) {
