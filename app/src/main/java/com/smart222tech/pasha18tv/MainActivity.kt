@@ -182,7 +182,7 @@ private fun Pasha18App(
 private fun LanguageGate(p: Preferences, onLanguage: (AppLanguage) -> Unit, onConfirm: () -> Unit) {
     Column(Modifier.fillMaxSize().padding(42.dp), horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center) {
-        Text("PASHA 18+", color = Color.White, fontSize = 38.sp, fontWeight = FontWeight.Black)
+        Text("PASHXXX", color = Color.White, fontSize = 38.sp, fontWeight = FontWeight.Black)
         Spacer(Modifier.height(20.dp))
         Text("Choose language / Sprache wählen / Выберите язык / Оберіть мову",
             color = Color.LightGray, fontSize = 18.sp)
@@ -214,7 +214,7 @@ private fun HomeScreen(p: Preferences, accent: Color, onRefresh: () -> Unit, onS
                 .border(1.dp, Color.White.copy(alpha = 0.055f), RoundedCornerShape(24.dp)).padding(18.dp),
             verticalArrangement = Arrangement.spacedBy(13.dp)
         ) {
-            Text("PASHA", color = Color.White, fontSize = 27.sp, fontWeight = FontWeight.Black)
+            Text("PASHXXX", color = Color.White, fontSize = 27.sp, fontWeight = FontWeight.Black)
             Text("18+  •  ENTERTAINMENT", color = accent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(14.dp))
             Text("MENU", color = Color(0xFF697487), fontSize = 10.sp, fontWeight = FontWeight.Bold)
@@ -223,7 +223,7 @@ private fun HomeScreen(p: Preferences, accent: Color, onRefresh: () -> Unit, onS
             Spacer(Modifier.weight(1f))
             Box(Modifier.fillMaxWidth().background(Color.White.copy(alpha = 0.045f), RoundedCornerShape(14.dp)).padding(horizontal = 12.dp, vertical = 12.dp)) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("PASHA 18+", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text("PASHXXX", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     Text("PRIVATE • PERSONAL", color = Color(0xFF7D899B), fontSize = 9.sp)
                 }
             }

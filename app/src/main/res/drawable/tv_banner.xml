@@ -3,8 +3,18 @@
     android:height="180dp"
     android:viewportWidth="320"
     android:viewportHeight="180">
-    <path android:fillColor="#10141E" android:pathData="M0,0h320v180h-320z"/>
-    <path android:fillColor="#FF7547" android:pathData="M22,36h84a12,12 0,0 1,12 12v84a12,12 0,0 1,-12 12h-84a12,12 0,0 1,-12 -12v-84a12,12 0,0 1,12 -12z"/>
-    <path android:fillColor="#FFFFFF" android:pathData="M35,63h10v52h-10zM53,63h10v52h-10zM71,63h10v52h-10z"/>
-    <path android:fillColor="#FF7547" android:pathData="M141,61h150v7h-150zM141,82h112v5h-112zM141,101h132v5h-132z"/>
+    <path android:fillColor="#08090D" android:pathData="M0,0h320v180h-320z"/>
+    <path android:fillColor="#180A10" android:pathData="M0,0h320v180h-320z"/>
+    <path android:fillColor="#2A0B15" android:pathData="M0,0h320v180h-320z" android:alpha="0.65"/>
+    <path android:fillColor="#FF1738" android:pathData="M24,27h126a4,4 0,0 1,4 4v118a4,4 0,0 1,-4 4h-126a4,4 0,0 1,-4 -4v-118a4,4 0,0 1,4 -4z"/>
+    <path android:fillColor="#08090D" android:pathData="M30,33h114v106h-114z"/>
+    <path android:fillColor="#F5F5F7" android:pathData="M43,56h12v62h-12zM43,56h38v12h-38zM69,56h12v32h-12zM43,81h38v12h-38z"/>
+    <path android:fillColor="#FF1738" android:pathData="M88,57l8,-7 18,21 18,-21 8,7 -18,23 18,23 -8,7 -18,-22 -18,22 -8,-7 18,-23z"/>
+    <path android:fillColor="#FF1738" android:pathData="M122,57l8,-7 18,21 18,-21 8,7 -18,23 18,23 -8,7 -18,-22 -18,22 -8,-7 18,-23z"/>
+    <path android:fillColor="#FF1738" android:pathData="M156,57l8,-7 18,21 18,-21 8,7 -18,23 18,23 -8,7 -18,-22 -18,22 -8,-7 18,-23z"/>
+    <path android:fillColor="#F5F5F7" android:pathData="M92,126h100v4h-100zM92,137h76v3h-76z"/>
+    <path android:fillColor="#FF1738" android:pathData="M225,58h72v5h-72zM225,78h56v4h-56zM225,96h66v4h-66zM225,114h44v4h-44z"/>
+    <path android:fillColor="#FF1738" android:pathData="M224,132h74v22h-74z"/>
+    <path android:fillColor="#08090D" android:pathData="M229,137h64v12h-64z"/>
+    <path android:fillColor="#F5F5F7" android:pathData="M239,139h44v8h-44z"/>
 </vector>
