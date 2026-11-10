@@ -77,10 +77,10 @@ private data class Preferences(
 )
 
 private val translations = mapOf(
-    "ru" to listOf("Выберите источник", "Обновить", "Поиск", "Настройки", "Источники", "Каталог видео пока не подключён", "Откройте источник, чтобы просматривать его каталог.", "Язык", "Вид карточек", "Плеер", "Цвет темы", "Встроенный браузер", "Внешний VLC", "Внешний MX Player", "Сетка", "Список", "Назад", "Мне исполнилось 18 лет", "Только для совершеннолетних пользователей", "Введите запрос", "Выберите источник для поиска по его собственному каталогу. Единый поиск появится после подключения каталогов источников."),
-    "de" to listOf("Quelle auswählen", "Aktualisieren", "Suche", "Einstellungen", "Quellen", "Der Videokatalog ist noch nicht verbunden", "Öffne eine Quelle, um ihren Katalog zu durchsuchen.", "Sprache", "Kartenansicht", "Player", "Designfarbe", "Integrierter Browser", "Externer VLC", "Externer MX Player", "Raster", "Liste", "Zurück", "Ich bin mindestens 18 Jahre alt", "Nur für volljährige Nutzer", "Suchbegriff eingeben", "Wähle eine Quelle. Eine gemeinsame Suche folgt, sobald die Quellkataloge angebunden sind."),
-    "en" to listOf("Choose a source", "Refresh", "Search", "Settings", "Sources", "Video catalogue is not connected yet", "Open a source to browse its catalogue.", "Language", "Card layout", "Player", "Theme colour", "Built-in browser", "External VLC", "External MX Player", "Grid", "List", "Back", "I am 18 or older", "For adults only", "Enter search", "Choose a source. Unified search will be available after source catalogues are connected."),
-    "uk" to listOf("Виберіть джерело", "Оновити", "Пошук", "Налаштування", "Джерела", "Каталог відео ще не підключено", "Відкрийте джерело, щоб переглянути його каталог.", "Мова", "Вигляд карток", "Плеєр", "Колір теми", "Вбудований браузер", "Зовнішній VLC", "Зовнішній MX Player", "Сітка", "Список", "Назад", "Мені виповнилося 18 років", "Лише для повнолітніх користувачів", "Введіть запит", "Оберіть джерело для пошуку в його каталозі. Спільний пошук з’явиться після підключення каталогів джерел.")
+    "ru" to listOf("Выберите источник", "Обновить", "Поиск", "Настройки", "Источники", "Каталог видео пока не подключён", "Откройте источник, чтобы просматривать его каталог.", "Язык", "Вид карточек", "Плеер", "Цвет темы", "Встроенный браузер", "Внешний VLC", "Внешний MX Player", "Сетка", "Список", "Назад", "Мне исполнилось 18 лет", "Только для совершеннолетних пользователей", "Введите запрос", "Введите запрос и выберите сайт: откроются результаты поиска на самом сайте. Общая лента результатов пока не подключена."),
+    "de" to listOf("Quelle auswählen", "Aktualisieren", "Suche", "Einstellungen", "Quellen", "Der Videokatalog ist noch nicht verbunden", "Öffne eine Quelle, um ihren Katalog zu durchsuchen.", "Sprache", "Kartenansicht", "Player", "Designfarbe", "Integrierter Browser", "Externer VLC", "Externer MX Player", "Raster", "Liste", "Zurück", "Ich bin mindestens 18 Jahre alt", "Nur für volljährige Nutzer", "Suchbegriff eingeben", "Gib einen Suchbegriff ein und wähle eine Website. Die Treffer werden auf der jeweiligen Website geöffnet."),
+    "en" to listOf("Choose a source", "Refresh", "Search", "Settings", "Sources", "Video catalogue is not connected yet", "Open a source to browse its catalogue.", "Language", "Card layout", "Player", "Theme colour", "Built-in browser", "External VLC", "External MX Player", "Grid", "List", "Back", "I am 18 or older", "For adults only", "Enter search", "Enter a query and choose a site to open its own search results. A combined results feed is not connected yet."),
+    "uk" to listOf("Виберіть джерело", "Оновити", "Пошук", "Налаштування", "Джерела", "Каталог відео ще не підключено", "Відкрийте джерело, щоб переглянути його каталог.", "Мова", "Вигляд карток", "Плеєр", "Колір теми", "Вбудований браузер", "Зовнішній VLC", "Зовнішній MX Player", "Сітка", "Список", "Назад", "Мені виповнилося 18 років", "Лише для повнолітніх користувачів", "Введіть запит", "Введіть запит і виберіть сайт, щоб відкрити результати пошуку на ньому. Спільна стрічка результатів ще не підключена.")
 )
 private fun tr(p: Preferences, index: Int) = translations[p.language.code]!![index]
 private val accents = listOf(0xFFFF6B35.toInt(), 0xFF36A3FF.toInt(), 0xFFB66CFF.toInt(), 0xFF28B889.toInt())
@@ -132,7 +132,9 @@ private fun Pasha18App(
                     preferences = it; save(it)
                 }, onBack = { page = Page.HOME })
                 page == Page.SEARCH -> SearchScreen(preferences, accent, value = searchText,
-                    onValue = { searchText = it }, onSelect = { selectedSite = it }, onBack = { page = Page.HOME })
+                    onValue = { searchText = it },
+                    onSelect = { site -> selectedSite = site.copy(url = buildSearchUrl(site, searchText)) },
+                    onBack = { page = Page.HOME })
                 else -> HomeScreen(preferences, accent, onRefresh = { },
                     onSearch = { page = Page.SEARCH }, onSettings = { page = Page.SETTINGS },
                     onSelect = { selectedSite = it })
@@ -207,6 +209,19 @@ private fun SiteCard(site: VideoSite, accent: Color, list: Boolean, onClick: () 
         colors = ButtonDefaults.buttonColors(containerColor = if (focused) Color(0xFF30394A) else Color(0xFF191F2B)),
         contentPadding = PaddingValues(12.dp)) {
         Text(site.name, color = Color.White, fontSize = if (list) 21.sp else 25.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+private fun buildSearchUrl(site: VideoSite, query: String): String {
+    val term = query.trim()
+    if (term.isEmpty()) return site.url
+    val encoded = Uri.encode(term)
+    return when (site.name) {
+        "Pornhub" -> "https://www.pornhub.com/video/search?search=$encoded"
+        "xVideos" -> "https://www.xvideos.com/?k=$encoded"
+        "xHamster" -> "https://xhamster.com/search/$encoded"
+        "XNXX" -> "https://www.xnxx.com/search/$encoded"
+        else -> site.url
     }
 }
 
