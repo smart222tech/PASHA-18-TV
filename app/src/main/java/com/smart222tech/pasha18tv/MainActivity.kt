@@ -316,7 +316,7 @@ private fun SiteBrowser(site: VideoSite, p: Preferences, accent: Color, onBack: 
                 override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) { isLoading = true }
                 override fun onPageFinished(view: WebView?, url: String?) { isLoading = false; canGoForward = view?.canGoForward() == true }
             }
-            webChromeClient = object : WebChromeClient()
+            webChromeClient = object : WebChromeClient() {}
             loadUrl(site.url)
         }
     }
