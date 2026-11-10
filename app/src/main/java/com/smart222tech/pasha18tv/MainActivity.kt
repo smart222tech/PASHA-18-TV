@@ -80,7 +80,7 @@ private val translations = mapOf(
     "ru" to listOf("Выберите источник", "Обновить", "Поиск", "Настройки", "Источники", "Каталог видео пока не подключён", "Откройте источник, чтобы просматривать его каталог.", "Язык", "Вид карточек", "Плеер", "Цвет темы", "Встроенный браузер", "Внешний VLC", "Внешний MX Player", "Сетка", "Список", "Назад", "Мне исполнилось 18 лет", "Только для совершеннолетних пользователей", "Введите запрос", "Выберите источник для поиска по его собственному каталогу. Единый поиск появится после подключения каталогов источников."),
     "de" to listOf("Quelle auswählen", "Aktualisieren", "Suche", "Einstellungen", "Quellen", "Der Videokatalog ist noch nicht verbunden", "Öffne eine Quelle, um ihren Katalog zu durchsuchen.", "Sprache", "Kartenansicht", "Player", "Designfarbe", "Integrierter Browser", "Externer VLC", "Externer MX Player", "Raster", "Liste", "Zurück", "Ich bin mindestens 18 Jahre alt", "Nur für volljährige Nutzer", "Suchbegriff eingeben", "Wähle eine Quelle. Eine gemeinsame Suche folgt, sobald die Quellkataloge angebunden sind."),
     "en" to listOf("Choose a source", "Refresh", "Search", "Settings", "Sources", "Video catalogue is not connected yet", "Open a source to browse its catalogue.", "Language", "Card layout", "Player", "Theme colour", "Built-in browser", "External VLC", "External MX Player", "Grid", "List", "Back", "I am 18 or older", "For adults only", "Enter search", "Choose a source. Unified search will be available after source catalogues are connected."),
-    "uk" to listOf("Виберіть джерело", "Оновити", "Пошук", "Налаштування", "Джерела", "Каталог відео ще не підключено", "Відкрийте джерело, щоб переглянути його каталог.", "Мова", "Вигляд карток", "Плеєр", "Колір теми", "Вбудований браузер", "Зовнішній VLC", "Зовнішній MX Player", "Сітка", "Список", "Назад", "Мені виповнилося 18 років", "Лише для повнолітніх користувачів", "Введіть запит")
+    "uk" to listOf("Виберіть джерело", "Оновити", "Пошук", "Налаштування", "Джерела", "Каталог відео ще не підключено", "Відкрийте джерело, щоб переглянути його каталог.", "Мова", "Вигляд карток", "Плеєр", "Колір теми", "Вбудований браузер", "Зовнішній VLC", "Зовнішній MX Player", "Сітка", "Список", "Назад", "Мені виповнилося 18 років", "Лише для повнолітніх користувачів", "Введіть запит", "Оберіть джерело для пошуку в його каталозі. Спільний пошук з’явиться після підключення каталогів джерел.")
 )
 private fun tr(p: Preferences, index: Int) = translations[p.language.code]!![index]
 private val accents = listOf(0xFFFF6B35.toInt(), 0xFF36A3FF.toInt(), 0xFFB66CFF.toInt(), 0xFF28B889.toInt())
@@ -96,18 +96,28 @@ class MainActivity : ComponentActivity() {
             accent = prefs.getInt("accent", accents.first())
         )
         setContent {
-            Pasha18App(initial) { p ->
-                prefs.edit().putString("language", p.language.code).putString("grid", p.grid.name)
-                    .putString("player", p.player.name).putInt("accent", p.accent).apply()
-            }
+            Pasha18App(
+                initial = initial,
+                initialAgeConfirmed = prefs.getBoolean("age_confirmed", false),
+                save = { p ->
+                    prefs.edit().putString("language", p.language.code).putString("grid", p.grid.name)
+                        .putString("player", p.player.name).putInt("accent", p.accent).apply()
+                },
+                confirmAge = { prefs.edit().putBoolean("age_confirmed", true).apply() }
+            )
         }
     }
 }
 
 @Composable
-private fun Pasha18App(initial: Preferences, save: (Preferences) -> Unit) {
+private fun Pasha18App(
+    initial: Preferences,
+    initialAgeConfirmed: Boolean,
+    save: (Preferences) -> Unit,
+    confirmAge: () -> Unit
+) {
     var preferences by remember { mutableStateOf(initial) }
-    var ageConfirmed by remember { mutableStateOf(false) }
+    var ageConfirmed by remember { mutableStateOf(initialAgeConfirmed) }
     var page by remember { mutableStateOf(Page.HOME) }
     var selectedSite by remember { mutableStateOf<VideoSite?>(null) }
     var searchText by remember { mutableStateOf("") }
@@ -116,7 +126,7 @@ private fun Pasha18App(initial: Preferences, save: (Preferences) -> Unit) {
         Surface(Modifier.fillMaxSize(), color = Color(0xFF090B10)) {
             when {
                 !ageConfirmed -> LanguageGate(preferences, onLanguage = { preferences = preferences.copy(language = it); save(preferences) },
-                    onConfirm = { ageConfirmed = true })
+                    onConfirm = { ageConfirmed = true; confirmAge() })
                 selectedSite != null -> SiteBrowser(selectedSite!!, preferences, accent, onBack = { selectedSite = null })
                 page == Page.SETTINGS -> SettingsScreen(preferences, accent, onChange = {
                     preferences = it; save(it)
