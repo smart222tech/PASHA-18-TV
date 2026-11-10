@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.view.KeyEvent
 import android.webkit.CookieManager
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
@@ -77,13 +78,41 @@ private data class Preferences(
 )
 
 private val translations = mapOf(
-    "ru" to listOf("Выберите источник", "Обновить", "Поиск", "Настройки", "Источники", "Каталог видео пока не подключён", "Откройте источник, чтобы просматривать его каталог.", "Язык", "Вид карточек", "Плеер", "Цвет темы", "Встроенный браузер", "Внешний VLC", "Внешний MX Player", "Сетка", "Список", "Назад", "Мне исполнилось 18 лет", "Только для совершеннолетних пользователей", "Введите запрос", "Введите запрос и выберите сайт: откроются результаты поиска на самом сайте. Общая лента результатов пока не подключена."),
-    "de" to listOf("Quelle auswählen", "Aktualisieren", "Suche", "Einstellungen", "Quellen", "Der Videokatalog ist noch nicht verbunden", "Öffne eine Quelle, um ihren Katalog zu durchsuchen.", "Sprache", "Kartenansicht", "Player", "Designfarbe", "Integrierter Browser", "Externer VLC", "Externer MX Player", "Raster", "Liste", "Zurück", "Ich bin mindestens 18 Jahre alt", "Nur für volljährige Nutzer", "Suchbegriff eingeben", "Gib einen Suchbegriff ein und wähle eine Website. Die Treffer werden auf der jeweiligen Website geöffnet."),
-    "en" to listOf("Choose a source", "Refresh", "Search", "Settings", "Sources", "Video catalogue is not connected yet", "Open a source to browse its catalogue.", "Language", "Card layout", "Player", "Theme colour", "Built-in browser", "External VLC", "External MX Player", "Grid", "List", "Back", "I am 18 or older", "For adults only", "Enter search", "Enter a query and choose a site to open its own search results. A combined results feed is not connected yet."),
-    "uk" to listOf("Виберіть джерело", "Оновити", "Пошук", "Налаштування", "Джерела", "Каталог відео ще не підключено", "Відкрийте джерело, щоб переглянути його каталог.", "Мова", "Вигляд карток", "Плеєр", "Колір теми", "Вбудований браузер", "Зовнішній VLC", "Зовнішній MX Player", "Сітка", "Список", "Назад", "Мені виповнилося 18 років", "Лише для повнолітніх користувачів", "Введіть запит", "Введіть запит і виберіть сайт, щоб відкрити результати пошуку на ньому. Спільна стрічка результатів ще не підключена.")
+    "ru" to listOf("Выберите источник", "Обновить", "Поиск", "Настройки", "Источники", "Каталог видео пока не подключён", "Откройте источник, чтобы просматривать его каталог.", "Язык", "Вид карточек", "Плеер", "Цвет темы", "Встроенный браузер", "Внешний VLC", "Внешний MX Player", "Сетка", "Список", "Назад", "Мне исполнилось 18 лет", "Только для совершеннолетних пользователей", "Введите запрос", "Введите запрос и выберите сайт: откроются результаты поиска на самом сайте. Общая лента результатов пока не подключена.", "Пульт: стрелки — перемещение, OK — нажать"),
+    "de" to listOf("Quelle auswählen", "Aktualisieren", "Suche", "Einstellungen", "Quellen", "Der Videokatalog ist noch nicht verbunden", "Öffne eine Quelle, um ihren Katalog zu durchsuchen.", "Sprache", "Kartenansicht", "Player", "Designfarbe", "Integrierter Browser", "Externer VLC", "Externer MX Player", "Raster", "Liste", "Zurück", "Ich bin mindestens 18 Jahre alt", "Nur für volljährige Nutzer", "Suchbegriff eingeben", "Gib einen Suchbegriff ein und wähle eine Website. Die Treffer werden auf der jeweiligen Website geöffnet.", "Fernbedienung: Pfeile bewegen den Cursor, OK wählt aus"),
+    "en" to listOf("Choose a source", "Refresh", "Search", "Settings", "Sources", "Video catalogue is not connected yet", "Open a source to browse its catalogue.", "Language", "Card layout", "Player", "Theme colour", "Built-in browser", "External VLC", "External MX Player", "Grid", "List", "Back", "I am 18 or older", "For adults only", "Enter search", "Enter a query and choose a site to open its own search results. A combined results feed is not connected yet.", "Remote: arrows move the cursor, OK selects"),
+    "uk" to listOf("Виберіть джерело", "Оновити", "Пошук", "Налаштування", "Джерела", "Каталог відео ще не підключено", "Відкрийте джерело, щоб переглянути його каталог.", "Мова", "Вигляд карток", "Плеєр", "Колір теми", "Вбудований браузер", "Зовнішній VLC", "Зовнішній MX Player", "Сітка", "Список", "Назад", "Мені виповнилося 18 років", "Лише для повнолітніх користувачів", "Введіть запит", "Введіть запит і виберіть сайт, щоб відкрити результати пошуку на ньому. Спільна стрічка результатів ще не підключена.", "Пульт: стрілки рухають курсор, OK натискає")
 )
 private fun tr(p: Preferences, index: Int) = translations[p.language.code]!![index]
 private val accents = listOf(0xFFFF6B35.toInt(), 0xFF36A3FF.toInt(), 0xFFB66CFF.toInt(), 0xFF28B889.toInt())
+
+private const val TV_CURSOR_SCRIPT = """(function(){
+ if(window.__pashaTvCursorReady)return;window.__pashaTvCursorReady=true;
+ var c=document.createElement("div");c.id="__pasha_tv_cursor";
+ c.style.cssText="position:fixed;z-index:2147483647;left:50%;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px;border:3px solid #fff;border-radius:50%;background:rgba(255,107,53,.35);box-shadow:0 0 0 2px #ff6b35,0 2px 12px #000;pointer-events:none;display:block;";
+ (document.body||document.documentElement).appendChild(c);
+ var x=innerWidth/2,y=innerHeight/2;
+ window.__pashaMoveCursor=function(dx,dy){x=Math.max(2,Math.min(innerWidth-2,x+dx));y=Math.max(2,Math.min(innerHeight-2,y+dy));c.style.left=x+"px";c.style.top=y+"px";};
+ window.__pashaClickCursor=function(){var e=document.elementFromPoint(x,y);if(!e)return;try{e.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,clientX:x,clientY:y,pointerType:"mouse"}));e.dispatchEvent(new MouseEvent("mousedown",{bubbles:true,clientX:x,clientY:y}));e.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,clientX:x,clientY:y,pointerType:"mouse"}));e.dispatchEvent(new MouseEvent("mouseup",{bubbles:true,clientX:x,clientY:y}));e.click();}catch(err){try{e.click();}catch(ignore){}}};
+})();"""
+
+private class TvRemoteWebView(context: android.content.Context) : WebView(context) {
+ var tvRemoteEnabled=false
+ override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+  if(tvRemoteEnabled && event.action==KeyEvent.ACTION_DOWN){
+   val js=when(event.keyCode){
+    KeyEvent.KEYCODE_DPAD_UP -> "window.__pashaMoveCursor&&window.__pashaMoveCursor(0,-48)"
+    KeyEvent.KEYCODE_DPAD_DOWN -> "window.__pashaMoveCursor&&window.__pashaMoveCursor(0,48)"
+    KeyEvent.KEYCODE_DPAD_LEFT -> "window.__pashaMoveCursor&&window.__pashaMoveCursor(-48,0)"
+    KeyEvent.KEYCODE_DPAD_RIGHT -> "window.__pashaMoveCursor&&window.__pashaMoveCursor(48,0)"
+    KeyEvent.KEYCODE_DPAD_CENTER,KeyEvent.KEYCODE_ENTER -> "window.__pashaClickCursor&&window.__pashaClickCursor()"
+    else -> null
+   }
+   if(js!=null){evaluateJavascript(js,null);return true}
+  }
+  return super.dispatchKeyEvent(event)
+ }
+}
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -304,13 +333,16 @@ private fun SiteBrowser(site: VideoSite, p: Preferences, accent: Color, onBack: 
     val context = LocalContext.current
     var canGoForward by remember(site.url) { mutableStateOf(false) }
     var isLoading by remember(site.url) { mutableStateOf(true) }
+    val isTelevision = (context.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_TYPE_MASK) == android.content.res.Configuration.UI_MODE_TYPE_TELEVISION
     val webView = remember(site.url) {
-        WebView(context).apply {
+        TvRemoteWebView(context).apply {
+            tvRemoteEnabled = isTelevision
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
             settings.loadsImagesAutomatically = true
             settings.useWideViewPort = true
-            settings.loadWithOverviewMode = true
+            settings.loadWithOverviewMode = false
+            settings.userAgentString = settings.userAgentString.replace("; wv", "")
             settings.mediaPlaybackRequiresUserGesture = true
             settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
             settings.allowFileAccess = false
@@ -339,7 +371,11 @@ private fun SiteBrowser(site: VideoSite, p: Preferences, accent: Color, onBack: 
                     return false
                 }
                 override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) { isLoading = true }
-                override fun onPageFinished(view: WebView?, url: String?) { isLoading = false; canGoForward = view?.canGoForward() == true }
+                override fun onPageFinished(view: WebView?, url: String?) {
+                    isLoading = false
+                    canGoForward = view?.canGoForward() == true
+                    if (isTelevision) view?.evaluateJavascript(TV_CURSOR_SCRIPT, null)
+                }
             }
             webChromeClient = object : WebChromeClient() {}
             loadUrl(site.url)
@@ -358,6 +394,7 @@ private fun SiteBrowser(site: VideoSite, p: Preferences, accent: Color, onBack: 
             Spacer(Modifier.width(6.dp))
             Button(onClick = onBack) { Text("⌂") }
             if (isLoading) Text("  …", color = accent)
+            if (isTelevision) Text("  ${tr(p, 21)}", color = Color(0xFFB9C0CC), fontSize = 12.sp)
         }
         AndroidView(factory = { webView }, modifier = Modifier.fillMaxSize())
     }
