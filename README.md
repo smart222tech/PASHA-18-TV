@@ -1,39 +1,31 @@
 # PASHA 18+ TV
 
-Android TV / Google TV starter app built with Kotlin and Jetpack Compose.
+Android TV / Google TV app built with Kotlin and Jetpack Compose.
 
-## Current MVP
+## Current build: 0.2.0
 
-- Large, D-pad-focusable source tiles for Pornhub, xVideos, xHamster and XNXX.
-- Simple 18+ confirmation screen.
-- Opens each provider inside Android WebView.
-- Back button navigates WebView history first, then returns to the source grid.
-- Debug APK is built by GitHub Actions and uploaded as an artifact.
+- First-launch language selection: Russian, German, English and Ukrainian.
+- TV-friendly home screen with left navigation, source tiles and D-pad focus states.
+- Persistent settings: language, 3 / 9 / 18-card layout or list, accent colour, internal browser / VLC / MX Player preference.
+- Search screen routes the user to a selected provider. A true cross-provider video search is not yet available because provider catalog adapters have not been integrated.
+- Embedded WebView browser for the four configured providers.
+- External player handoff is attempted only for direct HTTP(S) media URLs. Provider-controlled embedded players may not expose such URLs.
+- GitHub Actions builds a debug APK artifact.
 
-## Important scope and limitations
+## Important current limitations
 
-This MVP is a **site launcher and embedded browser**, not a stream extractor. It does not scrape private APIs, bypass DRM, defeat access controls, remove provider advertising, or circumvent age/region restrictions. Sites control their own catalog, playback, login, ads and availability. If a provider disallows embedded playback, use its permitted viewing method.
+This version is a multilingual TV interface and provider browser, **not yet a unified video catalogue**. It does not currently extract video thumbnails, create hover trailers, synchronize categories, or perform global search across provider catalogs. Those require provider-specific, permitted catalog integrations; a static tile must not be presented as a real video item.
 
-The 18+ confirmation is a basic in-app gate, not legally sufficient age verification. Do not distribute publicly until age-assurance, privacy, jurisdictional and provider-terms requirements have been reviewed.
+The app does not bypass DRM, authentication, access controls, provider advertising, age/region restrictions, or site terms. If a provider disallows embedded playback, use its permitted viewing method.
+
+The in-app 18+ confirmation is not legally sufficient age verification. Do not distribute publicly until age-assurance, privacy, jurisdictional and provider-terms requirements have been reviewed.
 
 ## Build
 
-GitHub Actions workflow: `.github/workflows/build-apk.yml`
-
-1. Open the repository's **Actions** tab.
-2. Open **Build PASHA 18+ APK** for branch `feature/tv-webview-mvp`.
-3. Download the `PASHA-18-TV-debug` artifact.
-4. Extract `app-debug.apk` and install it on a test device.
-
-Local build (JDK 17 and Gradle 8.9):
-
-```bash
-gradle assembleDebug
-```
-
-## Package
+Open **Actions** and select **Build PASHA 18+ APK** on branch `feature/tv-webview-mvp`. Download the artifact named `PASHA-18-TV-v0.2.0-debug`.
 
 - Application ID: `com.smart222tech.pasha18tv`
-- Version: `0.1.0` (versionCode 1)
+- Version: `0.2.0` (versionCode 3)
 - Minimum Android: API 23
 - Target Android: API 35
+- JDK: 17
