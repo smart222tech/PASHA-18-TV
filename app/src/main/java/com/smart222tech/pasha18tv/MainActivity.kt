@@ -73,8 +73,6 @@ private fun Pasha18App() {
     var ageConfirmed by remember { mutableStateOf(false) }
     var selectedSite by remember { mutableStateOf<VideoSite?>(null) }
 
-    BackHandler(enabled = selectedSite != null) { selectedSite = null }
-
     MaterialTheme(
         colorScheme = MaterialTheme.colorScheme.copy(
             background = Color(0xFF090B10),
@@ -199,6 +197,10 @@ private fun SiteBrowser(site: VideoSite, onBack: () -> Unit) {
             }
             loadUrl(site.url)
         }
+    }
+
+    BackHandler {
+        if (webView.canGoBack()) webView.goBack() else onBack()
     }
 
     DisposableEffect(webView) {
