@@ -171,6 +171,9 @@ private fun SiteCard(site: VideoSite, onClick: () -> Unit) {
 private fun SiteBrowser(site: VideoSite, onBack: () -> Unit) {
     val context = LocalContext.current
     var pageTitle by remember(site.url) { mutableStateOf(site.name) }
+    var canGoBack by remember(site.url) { mutableStateOf(false) }
+    var canGoForward by remember(site.url) { mutableStateOf(false) }
+    var isLoading by remember(site.url) { mutableStateOf(true) }
     val webView = remember(site.url) {
         WebView(context).apply {
             settings.javaScriptEnabled = true
@@ -184,10 +187,22 @@ private fun SiteBrowser(site: VideoSite, onBack: () -> Unit) {
             settings.setSupportMultipleWindows(false)
             CookieManager.getInstance().setAcceptCookie(true)
             CookieManager.getInstance().setAcceptThirdPartyCookies(this, false)
+            isFocusable = true
+            isFocusableInTouchMode = true
             webViewClient = object : WebViewClient() {
                 override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                     val scheme = request?.url?.scheme ?: return true
                     return scheme != "https" && scheme != "http"
+                }
+
+                override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
+                    isLoading = true
+                }
+
+                override fun onPageFinished(view: WebView?, url: String?) {
+                    isLoading = false
+                    canGoBack = view?.canGoBack() == true
+                    canGoForward = view?.canGoForward() == true
                 }
             }
             webChromeClient = object : WebChromeClient() {
@@ -212,9 +227,23 @@ private fun SiteBrowser(site: VideoSite, onBack: () -> Unit) {
             modifier = Modifier.fillMaxWidth().background(Color(0xFF151923)).padding(horizontal = 20.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Button(onClick = onBack) { Text("‹  НАЗАД") }
-            Spacer(Modifier.width(18.dp))
-            Text(pageTitle, color = Color.White, fontSize = 16.sp, maxLines = 1)
+            Button(
+                onClick = { if (webView.canGoBack()) webView.goBack() else onBack() },
+                enabled = canGoBack || true
+            ) { Text("‹") }
+            Spacer(Modifier.width(6.dp))
+            Button(onClick = { if (webView.canGoForward()) webView.goForward() }, enabled = canGoForward) {
+                Text("›")
+            }
+            Spacer(Modifier.width(6.dp))
+            Button(onClick = { webView.reload() }) { Text("↻") }
+            Spacer(Modifier.width(6.dp))
+            Button(onClick = onBack) { Text("⌂") }
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text(pageTitle, color = Color.White, fontSize = 15.sp, maxLines = 1)
+                if (isLoading) Text("Загрузка…", color = Color(0xFFFF8A50), fontSize = 11.sp)
+            }
         }
         AndroidView(factory = { webView }, modifier = Modifier.fillMaxSize())
     }
