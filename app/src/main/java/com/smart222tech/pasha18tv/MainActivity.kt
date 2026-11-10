@@ -77,9 +77,9 @@ private data class Preferences(
 )
 
 private val translations = mapOf(
-    "ru" to listOf("Выберите источник", "Обновить", "Поиск", "Настройки", "Источники", "Каталог видео пока не подключён", "Откройте источник, чтобы просматривать его каталог.", "Язык", "Вид карточек", "Плеер", "Цвет темы", "Встроенный браузер", "Внешний VLC", "Внешний MX Player", "Сетка", "Список", "Назад", "Мне исполнилось 18 лет", "Только для совершеннолетних пользователей", "Введите запрос"),
-    "de" to listOf("Quelle auswählen", "Aktualisieren", "Suche", "Einstellungen", "Quellen", "Der Videokatalog ist noch nicht verbunden", "Öffne eine Quelle, um ihren Katalog zu durchsuchen.", "Sprache", "Kartenansicht", "Player", "Designfarbe", "Integrierter Browser", "Externer VLC", "Externer MX Player", "Raster", "Liste", "Zurück", "Ich bin mindestens 18 Jahre alt", "Nur für volljährige Nutzer", "Suchbegriff eingeben"),
-    "en" to listOf("Choose a source", "Refresh", "Search", "Settings", "Sources", "Video catalogue is not connected yet", "Open a source to browse its catalogue.", "Language", "Card layout", "Player", "Theme colour", "Built-in browser", "External VLC", "External MX Player", "Grid", "List", "Back", "I am 18 or older", "For adults only", "Enter search"),
+    "ru" to listOf("Выберите источник", "Обновить", "Поиск", "Настройки", "Источники", "Каталог видео пока не подключён", "Откройте источник, чтобы просматривать его каталог.", "Язык", "Вид карточек", "Плеер", "Цвет темы", "Встроенный браузер", "Внешний VLC", "Внешний MX Player", "Сетка", "Список", "Назад", "Мне исполнилось 18 лет", "Только для совершеннолетних пользователей", "Введите запрос", "Выберите источник для поиска по его собственному каталогу. Единый поиск появится после подключения каталогов источников."),
+    "de" to listOf("Quelle auswählen", "Aktualisieren", "Suche", "Einstellungen", "Quellen", "Der Videokatalog ist noch nicht verbunden", "Öffne eine Quelle, um ihren Katalog zu durchsuchen.", "Sprache", "Kartenansicht", "Player", "Designfarbe", "Integrierter Browser", "Externer VLC", "Externer MX Player", "Raster", "Liste", "Zurück", "Ich bin mindestens 18 Jahre alt", "Nur für volljährige Nutzer", "Suchbegriff eingeben", "Wähle eine Quelle. Eine gemeinsame Suche folgt, sobald die Quellkataloge angebunden sind."),
+    "en" to listOf("Choose a source", "Refresh", "Search", "Settings", "Sources", "Video catalogue is not connected yet", "Open a source to browse its catalogue.", "Language", "Card layout", "Player", "Theme colour", "Built-in browser", "External VLC", "External MX Player", "Grid", "List", "Back", "I am 18 or older", "For adults only", "Enter search", "Choose a source. Unified search will be available after source catalogues are connected."),
     "uk" to listOf("Виберіть джерело", "Оновити", "Пошук", "Налаштування", "Джерела", "Каталог відео ще не підключено", "Відкрийте джерело, щоб переглянути його каталог.", "Мова", "Вигляд карток", "Плеєр", "Колір теми", "Вбудований браузер", "Зовнішній VLC", "Зовнішній MX Player", "Сітка", "Список", "Назад", "Мені виповнилося 18 років", "Лише для повнолітніх користувачів", "Введіть запит")
 )
 private fun tr(p: Preferences, index: Int) = translations[p.language.code]!![index]
@@ -123,7 +123,7 @@ private fun Pasha18App(initial: Preferences, save: (Preferences) -> Unit) {
                 }, onBack = { page = Page.HOME })
                 page == Page.SEARCH -> SearchScreen(preferences, accent, value = searchText,
                     onValue = { searchText = it }, onSelect = { selectedSite = it }, onBack = { page = Page.HOME })
-                else -> HomeScreen(preferences, accent, onRefresh = { selectedSite = sites.first() },
+                else -> HomeScreen(preferences, accent, onRefresh = { },
                     onSearch = { page = Page.SEARCH }, onSettings = { page = Page.SETTINGS },
                     onSelect = { selectedSite = it })
             }
@@ -164,7 +164,7 @@ private fun HomeScreen(p: Preferences, accent: Color, onRefresh: () -> Unit, onS
         Column(Modifier.width(170.dp).fillMaxSize().background(Color(0xFF111722), RoundedCornerShape(18.dp)).padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("PASHA 18+", color = accent, fontSize = 23.sp, fontWeight = FontWeight.Black)
-            Button(onClick = onRefresh, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = accent)) { Text(tr(p, 1)) }
+            Button(onClick = onRefresh, enabled = false, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = accent, disabledContainerColor = Color(0xFF343B48), disabledContentColor = Color.LightGray)) { Text(tr(p, 1)) }
             OutlinedButton(onClick = onSearch, modifier = Modifier.fillMaxWidth()) { Text(tr(p, 2), color = Color.White) }
             OutlinedButton(onClick = onSettings, modifier = Modifier.fillMaxWidth()) { Text(tr(p, 3), color = Color.White) }
             Spacer(Modifier.weight(1f))
@@ -213,7 +213,7 @@ private fun SearchScreen(p: Preferences, accent: Color, value: String, onValue: 
         OutlinedTextField(value, onValue, modifier = Modifier.fillMaxWidth(),
             label = { Text(tr(p, 19)) }, singleLine = true)
         Spacer(Modifier.height(16.dp))
-        Text("Выберите источник для поиска по его собственному каталогу. Единый поиск появится после подключения каталогов источников.",
+        Text(tr(p, 20),
             color = Color.LightGray, fontSize = 16.sp)
         Spacer(Modifier.height(16.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
