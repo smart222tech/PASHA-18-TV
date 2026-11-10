@@ -14,8 +14,12 @@ import android.webkit.WebViewClient
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -48,7 +52,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -201,28 +207,62 @@ private fun LanguageGate(p: Preferences, onLanguage: (AppLanguage) -> Unit, onCo
 @Composable
 private fun HomeScreen(p: Preferences, accent: Color, onRefresh: () -> Unit, onSearch: () -> Unit,
                        onSettings: () -> Unit, onSelect: (VideoSite) -> Unit) {
-    Row(Modifier.fillMaxSize().padding(24.dp)) {
-        Column(Modifier.width(170.dp).fillMaxSize().background(Color(0xFF111722), RoundedCornerShape(18.dp)).padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("PASHA 18+", color = accent, fontSize = 23.sp, fontWeight = FontWeight.Black)
-            Button(onClick = onRefresh, enabled = false, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = accent, disabledContainerColor = Color(0xFF343B48), disabledContentColor = Color.LightGray)) { Text(tr(p, 1)) }
-            OutlinedButton(onClick = onSearch, modifier = Modifier.fillMaxWidth()) { Text(tr(p, 2), color = Color.White) }
-            OutlinedButton(onClick = onSettings, modifier = Modifier.fillMaxWidth()) { Text(tr(p, 3), color = Color.White) }
-            Spacer(Modifier.weight(1f))
-            Text(tr(p, 4), color = Color.Gray, fontSize = 12.sp)
-        }
-        Spacer(Modifier.width(22.dp))
-        Column(Modifier.weight(1f).fillMaxSize()) {
-            Text(tr(p, 0), color = Color.White, fontSize = 27.sp, fontWeight = FontWeight.Bold)
+    Row(Modifier.fillMaxSize().background(Color(0xFF080B12)).padding(horizontal = 30.dp, vertical = 24.dp)) {
+        Column(
+            Modifier.width(190.dp).fillMaxSize()
+                .background(Brush.verticalGradient(listOf(Color(0xFF151B27), Color(0xFF10151F), Color(0xFF0D1119))), RoundedCornerShape(24.dp))
+                .border(1.dp, Color.White.copy(alpha = 0.055f), RoundedCornerShape(24.dp)).padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(13.dp)
+        ) {
+            Text("PASHA", color = Color.White, fontSize = 27.sp, fontWeight = FontWeight.Black)
+            Text("18+  •  ENTERTAINMENT", color = accent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(14.dp))
-            Text(tr(p, 5), color = Color(0xFFB9C0CC), fontSize = 19.sp, fontWeight = FontWeight.SemiBold)
-            Spacer(Modifier.height(8.dp))
-            Text(tr(p, 6), color = Color.Gray, fontSize = 15.sp)
-            Spacer(Modifier.height(18.dp))
+            Text("MENU", color = Color(0xFF697487), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            NavAction("⌕", tr(p, 2), accent, onSearch)
+            NavAction("⚙", tr(p, 3), accent, onSettings)
+            Spacer(Modifier.weight(1f))
+            Box(Modifier.fillMaxWidth().background(Color.White.copy(alpha = 0.045f), RoundedCornerShape(14.dp)).padding(horizontal = 12.dp, vertical = 12.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("PASHA 18+", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text("PRIVATE • PERSONAL", color = Color(0xFF7D899B), fontSize = 9.sp)
+                }
+            }
+        }
+        Spacer(Modifier.width(28.dp))
+        Column(Modifier.weight(1f).fillMaxSize()) {
+            Row(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 20.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("WELCOME BACK", color = accent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Text(tr(p, 0), color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                }
+                Text("●  READY TO WATCH", color = Color(0xFF8995A7), fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+            }
+            Box(
+                Modifier.fillMaxWidth().height(142.dp)
+                    .background(Brush.linearGradient(listOf(Color(0xFF29243A), Color(0xFF1A2535), Color(0xFF111A28))), RoundedCornerShape(22.dp))
+                    .border(1.dp, Color.White.copy(alpha = 0.07f), RoundedCornerShape(22.dp))
+                    .padding(horizontal = 26.dp, vertical = 20.dp)
+            ) {
+                Column(Modifier.align(Alignment.CenterStart), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                    Text("YOUR ENTERTAINMENT HUB", color = accent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Text("Всё начинается здесь", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Bold)
+                    Text("Выбери источник и продолжай просмотр", color = Color(0xFFB5BECC), fontSize = 13.sp)
+                }
+                Text("P", Modifier.align(Alignment.CenterEnd).padding(end = 18.dp), color = Color.White.copy(alpha = 0.045f), fontSize = 112.sp, fontWeight = FontWeight.Black)
+            }
+            Spacer(Modifier.height(22.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(tr(p, 4), color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.width(10.dp))
+                Box(Modifier.width(4.dp).height(4.dp).background(accent, RoundedCornerShape(50)))
+                Text("  ${sites.size} SOURCES", color = Color(0xFF778397), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            }
+            Spacer(Modifier.height(12.dp))
             LazyVerticalGrid(
-                columns = if (p.grid == GridMode.LIST) GridCells.Fixed(1) else GridCells.Fixed(p.grid.count.coerceAtMost(6)),
+                columns = if (p.grid == GridMode.LIST) GridCells.Fixed(1) else GridCells.Fixed(if (p.grid == GridMode.THREE) 3 else 2),
                 modifier = Modifier.fillMaxSize(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
                 contentPadding = PaddingValues(bottom = 24.dp)
             ) { items(sites) { site -> SiteCard(site, accent, p.grid == GridMode.LIST, onClick = { onSelect(site) }) } }
         }
@@ -230,14 +270,49 @@ private fun HomeScreen(p: Preferences, accent: Color, onRefresh: () -> Unit, onS
 }
 
 @Composable
+private fun NavAction(icon: String, label: String, accent: Color, onClick: () -> Unit) {
+    var focused by remember { mutableStateOf(false) }
+    val bg by animateColorAsState(if (focused) Color(0xFF293447) else Color.Transparent, tween(180), label = "navBackground")
+    Button(
+        onClick = onClick, modifier = Modifier.fillMaxWidth().height(48.dp).onFocusChanged { focused = it.isFocused },
+        shape = RoundedCornerShape(13.dp),
+        border = if (focused) BorderStroke(1.dp, accent.copy(alpha = 0.85f)) else null,
+        colors = ButtonDefaults.buttonColors(containerColor = bg, contentColor = Color.White),
+        contentPadding = PaddingValues(horizontal = 12.dp)
+    ) {
+        Text(icon, color = if (focused) accent else Color(0xFF9AA6B8), fontSize = 18.sp)
+        Spacer(Modifier.width(10.dp))
+        Text(label, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+@Composable
 private fun SiteCard(site: VideoSite, accent: Color, list: Boolean, onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
-    Button(onClick = onClick, modifier = Modifier.fillMaxWidth().aspectRatio(if (list) 5.8f else 1.65f)
-        .onFocusChanged { focused = it.isFocused }, shape = RoundedCornerShape(16.dp),
-        border = if (focused) BorderStroke(3.dp, accent) else null,
-        colors = ButtonDefaults.buttonColors(containerColor = if (focused) Color(0xFF30394A) else Color(0xFF191F2B)),
-        contentPadding = PaddingValues(12.dp)) {
-        Text(site.name, color = Color.White, fontSize = if (list) 21.sp else 25.sp, fontWeight = FontWeight.Bold)
+    val scale by animateFloatAsState(if (focused) 1.035f else 1f, tween(190), label = "siteCardScale")
+    val borderColor by animateColorAsState(if (focused) accent else Color.White.copy(alpha = 0.07f), tween(190), label = "siteCardBorder")
+    val backgroundColor by animateColorAsState(if (focused) Color(0xFF273246) else Color(0xFF171E2A), tween(190), label = "siteCardBackground")
+    Button(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth().aspectRatio(if (list) 5.8f else 1.85f).graphicsLayer { scaleX = scale; scaleY = scale }.onFocusChanged { focused = it.isFocused },
+        shape = RoundedCornerShape(19.dp),
+        border = BorderStroke(if (focused) 2.dp else 1.dp, borderColor),
+        colors = ButtonDefaults.buttonColors(containerColor = backgroundColor),
+        contentPadding = PaddingValues(0.dp)
+    ) {
+        Box(
+            Modifier.fillMaxSize().background(
+                Brush.linearGradient(if (focused) listOf(Color(0xFF303D54), Color(0xFF1B2638), Color(0xFF182130)) else listOf(Color(0xFF202A39), Color(0xFF171F2D), Color(0xFF131A25))),
+                RoundedCornerShape(19.dp)
+            ).padding(horizontal = 18.dp, vertical = 14.dp)
+        ) {
+            Text(site.initials, Modifier.align(Alignment.CenterEnd), color = Color.White.copy(alpha = if (focused) 0.10f else 0.055f), fontSize = if (list) 54.sp else 66.sp, fontWeight = FontWeight.Black)
+            Column(Modifier.align(Alignment.CenterStart), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Text(site.name.uppercase(), color = Color.White, fontSize = if (list) 18.sp else 20.sp, fontWeight = FontWeight.ExtraBold)
+                Text("OPEN SOURCE  ›", color = if (focused) accent else Color(0xFF8996AA), fontSize = 9.sp, fontWeight = FontWeight.Bold)
+            }
+            if (focused) Box(Modifier.align(Alignment.BottomStart).width(30.dp).height(3.dp).background(accent, RoundedCornerShape(50)))
+        }
     }
 }
 
