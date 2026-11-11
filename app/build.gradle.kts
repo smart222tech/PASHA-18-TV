@@ -5,15 +5,17 @@ plugins {
 }
 
 android {
+    // Keep the Kotlin namespace stable for the existing Activity package.
     namespace = "com.smart222tech.pasha18tv"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.smart222tech.pasha18tv"
+        // New installation identity and launcher branding: PASHXXX.
+        applicationId = "com.smart222tech.pashxxx"
         minSdk = 23
         targetSdk = 35
-        versionCode = 7
-        versionName = "0.4.0"
+        versionCode = 8
+        versionName = "0.5.0"
     }
 
     buildFeatures { compose = true }
