@@ -15,7 +15,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.animateFloatAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -170,7 +170,7 @@ private fun Pasha18App(
                     onValue = { searchText = it },
                     onSelect = { site -> selectedSite = site.copy(url = buildSearchUrl(site, searchText)) },
                     onBack = { page = Page.HOME })
-                else -> HomeScreen(preferences, accent, onRefresh = { },
+                else -> HomeScreen(preferences, accent,
                     onSearch = { page = Page.SEARCH }, onSettings = { page = Page.SETTINGS },
                     onSelect = { selectedSite = it })
             }
@@ -205,7 +205,7 @@ private fun LanguageGate(p: Preferences, onLanguage: (AppLanguage) -> Unit, onCo
 }
 
 @Composable
-private fun HomeScreen(p: Preferences, accent: Color, onRefresh: () -> Unit, onSearch: () -> Unit,
+private fun HomeScreen(p: Preferences, accent: Color, onSearch: () -> Unit,
                        onSettings: () -> Unit, onSelect: (VideoSite) -> Unit) {
     Row(Modifier.fillMaxSize().background(Color(0xFF080B12)).padding(horizontal = 30.dp, vertical = 24.dp)) {
         Column(
