@@ -1,31 +1,32 @@
-# PASHA 18+ TV
+# PASHXXX
 
-Android TV / Google TV app built with Kotlin and Jetpack Compose.
+Android TV / Google TV and smartphone app built with Kotlin and Jetpack Compose.
 
-## Current build: 0.2.0
+## Current build: 0.3.0 (versionCode 6)
 
-- First-launch language selection: Russian, German, English and Ukrainian.
-- TV-friendly home screen with left navigation, source tiles and D-pad focus states.
-- Persistent settings: language, 3 / 9 / 18-card layout or list, accent colour, internal browser / VLC / MX Player preference.
-- Search screen routes the user to a selected provider. A true cross-provider video search is not yet available because provider catalog adapters have not been integrated.
-- Embedded WebView browser for the four configured providers.
-- External player handoff is attempted only for direct HTTP(S) media URLs. Provider-controlled embedded players may not expose such URLs.
-- GitHub Actions builds a debug APK artifact.
+- Multilingual first-launch screen: Russian, German, English and Ukrainian.
+- Dark TV-oriented home screen with four provider shortcuts and D-pad focus styling.
+- Persistent preferences: language, card layout, accent colour and preferred playback handoff.
+- Search opens the selected provider's own website search; there is no combined cross-provider catalogue.
+- Embedded WebView browser with TV remote cursor support and Back navigation.
+- External player handoff is attempted only when a provider navigates to a direct HTTP(S) media URL and the selected player is installed.
 
-## Important current limitations
+## Current limitations and safety
 
-This version is a multilingual TV interface and provider browser, **not yet a unified video catalogue**. It does not currently extract video thumbnails, create hover trailers, synchronize categories, or perform global search across provider catalogs. Those require provider-specific, permitted catalog integrations; a static tile must not be presented as a real video item.
+This is currently a provider-browser app, **not a unified video catalogue**. It does not create video cards, posters, thumbnails, trailers, category feeds or global search results. Those features require provider APIs or data sources that explicitly permit this use.
 
-The app does not bypass DRM, authentication, access controls, provider advertising, age/region restrictions, or site terms. If a provider disallows embedded playback, use its permitted viewing method.
+The app does not bypass DRM, authentication, paywalls, advertising, age checks, region restrictions, anti-bot controls or provider terms. Provider pages and embedded players remain subject to their own restrictions.
 
-The in-app 18+ confirmation is not legally sufficient age verification. Do not distribute publicly until age-assurance, privacy, jurisdictional and provider-terms requirements have been reviewed.
+The in-app 18+ prompt is only a user self-declaration. It is **not identity verification or legally sufficient age assurance**. Public distribution must wait until age-assurance, privacy, jurisdictional and provider-terms requirements have been independently reviewed.
+
+TV remote cursor interaction is a compatibility technique, not a guarantee that every site or embedded player will accept synthetic pointer input. Protected or cross-origin frames may not respond. Physical Android TV / Google TV and smartphone testing is still required; CI builds do not prove device compatibility.
 
 ## Build
 
-Open **Actions** and select **Build PASHA 18+ APK** on branch `feature/tv-webview-mvp`. Download the artifact named `PASHA-18-TV-v0.2.0-debug`.
+Open **Actions** and select **Build PASHXXX APK** on branch `feature/tv-webview-mvp`. Download the artifact named `PASHXXX-v0.3.0-debug` after a successful workflow.
 
 - Application ID: `com.smart222tech.pasha18tv`
-- Version: `0.2.0` (versionCode 3)
+- Version: `0.3.0` (versionCode 6)
 - Minimum Android: API 23
 - Target Android: API 35
 - JDK: 17
