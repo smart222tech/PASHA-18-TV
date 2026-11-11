@@ -176,7 +176,13 @@ class TvBrowserActivity : Activity() {
 
     override fun onBackPressed() {
         if (customView != null) {
-            (web.webChromeClient as? WebChromeClient)?.onHideCustomView()
+            val view = customView
+            if (view != null) (window.decorView as ViewGroup).removeView(view)
+            customView = null
+            customCallback?.onCustomViewHidden()
+            customCallback = null
+            shell.visibility = View.VISIBLE
+            window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_VISIBLE
         } else if (::web.isInitialized && web.canGoBack()) {
             web.goBack()
         } else {
