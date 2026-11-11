@@ -149,7 +149,7 @@ private fun CatalogueScreen(entries: List<VideoEntry>, onOpen: (VideoEntry) -> U
             }
             Spacer(Modifier.height(14.dp))
             if (entries.isEmpty()) {
-                EmptyCatalogue()
+                EmptyCatalogue(Modifier.weight(1f))
             } else {
                 LazyVerticalGrid(
                     columns = GridCells.Adaptive(minSize = 185.dp),
@@ -180,9 +180,9 @@ private fun SideItem(symbol: String, label: String, selected: Boolean) {
 }
 
 @Composable
-private fun EmptyCatalogue() {
+private fun EmptyCatalogue(modifier: Modifier = Modifier) {
     Box(
-        Modifier.fillMaxWidth().weight(1f).clip(RoundedCornerShape(22.dp))
+        modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp))
             .background(Panel).border(1.dp, Color.White.copy(alpha = .055f), RoundedCornerShape(22.dp))
             .padding(28.dp),
         contentAlignment = Alignment.Center
