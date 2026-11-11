@@ -1,6 +1,7 @@
 package com.smart222tech.pasha18tv
 
 import android.os.Bundle
+import android.content.Intent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -76,6 +77,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun PashxxxApp() {
+    val context = androidx.compose.ui.platform.LocalContext.current
     var screen by remember { mutableStateOf<Screen>(Screen.Catalogue) }
     val entries = remember { VideoCatalogRepository.load() }
     BackHandler(enabled = screen !is Screen.Catalogue) {
@@ -87,7 +89,7 @@ private fun PashxxxApp() {
     }
     Surface(Modifier.fillMaxSize(), color = Background) {
         when (val current = screen) {
-            Screen.Catalogue -> CatalogueScreen(entries, onOpen = { screen = Screen.Details(it) })
+            Screen.Catalogue -> CatalogueScreen(entries, onOpen = { screen = Screen.Details(it) }, onBrowser = { context.startActivity(Intent(context, TvBrowserActivity::class.java)) })
             is Screen.Details -> DetailsScreen(current.entry,
                 onBack = { screen = Screen.Catalogue },
                 onPlay = { screen = Screen.Player(current.entry) })
@@ -97,7 +99,7 @@ private fun PashxxxApp() {
 }
 
 @Composable
-private fun CatalogueScreen(entries: List<VideoEntry>, onOpen: (VideoEntry) -> Unit) {
+private fun CatalogueScreen(entries: List<VideoEntry>, onOpen: (VideoEntry) -> Unit, onBrowser: () -> Unit) {
     Row(Modifier.fillMaxSize().padding(28.dp)) {
         Column(
             Modifier.width(205.dp).fillMaxHeight()
@@ -124,7 +126,9 @@ private fun CatalogueScreen(entries: List<VideoEntry>, onOpen: (VideoEntry) -> U
                     Text("ТВОЯ ВИДЕОТЕКА", color = Accent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                     Text("Открой для себя", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
                 }
-                Text("PASHXXX  /  TV", color = Muted, fontSize = 11.sp)
+                Button(onClick = onBrowser, colors = ButtonDefaults.buttonColors(containerColor = Accent)) {
+                    Text("ОТКРЫТЬ БРАУЗЕР", color = Color.White, fontWeight = FontWeight.Bold)
+                }
             }
             Spacer(Modifier.height(20.dp))
             Box(
