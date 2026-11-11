@@ -1,27 +1,28 @@
 # PASHXXX
 
-Native Android TV / Google TV and Android app built with Kotlin, Jetpack Compose and AndroidX Media3.
+Native Android TV / Google TV video application built with Kotlin, Jetpack Compose and AndroidX Media3.
 
-## Native catalogue foundation: 0.4.0 (versionCode 7)
+## Current native catalogue foundation: 0.5.0 (versionCode 8)
 
-- Replaces the provider-WebView landing experience with a native Compose catalogue layout.
-- Adds native video poster-card, scene-details and Media3 playback screens.
-- Includes an explicit empty-catalogue state until an authorized feed is configured.
-- Catalogue entries require title, synopsis, poster image URL, category, duration and a permitted playback URL.
-- No sample or fabricated videos/streams are presented as real content.
+- PASHXXX launcher identity and application ID: `com.smart222tech.pashxxx`.
+- Native Compose catalogue layout with video-card, details and Media3 playback foundations.
+- Android TV / Google TV launcher entry point and landscape-first layout.
+- Explicit empty-catalogue state until an authorized metadata and playback feed is configured.
+- No fake sample videos or fabricated stream URLs.
 
 ## Important integration requirement
 
-The catalogue repository is intentionally empty. A real catalogue needs a provider/API/feed that explicitly permits displaying its posters and descriptions and playing its media URLs. The app will not scrape sites, bypass DRM, authentication, paywalls, age checks, region restrictions, anti-bot controls or provider terms.
+A real catalogue needs a provider/API/feed that explicitly permits displaying its posters and descriptions and playing its media URLs. The current catalogue repository is intentionally empty. A browser/cursor mode and provider integration must be added and tested as a separate feature; they are not claimed as implemented in this build.
 
-The in-app age prompt in previous builds was only self-declaration and is not legally sufficient age assurance. Public distribution requires independent review of age assurance, privacy, jurisdictional requirements and provider terms.
+The app will not scrape sites, bypass DRM, authentication, paywalls, age checks, region restrictions, anti-bot controls or provider terms. Only lawful, authorized sources and user-provided media URLs should be integrated.
 
 ## Build
 
 GitHub Actions workflow: **Build PASHXXX APK**.
 
-- Application ID: `com.smart222tech.pasha18tv`
-- Version: `0.4.0` (versionCode 7)
+- Application ID: `com.smart222tech.pashxxx`
+- Kotlin namespace (kept stable for Activity compatibility): `com.smart222tech.pasha18tv`
+- Version: `0.5.0` (versionCode 8)
 - Minimum Android: API 23
 - Target Android: API 35
 - JDK: 17
