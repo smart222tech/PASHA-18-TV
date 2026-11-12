@@ -37,8 +37,18 @@ jobs:
           KEYSTORE_BASE64: ${{ secrets.PASHXXX_KEYSTORE_BASE64 }}
         run: |
           echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/pashxxx-release.jks"
+      - name: Calculate Android version code
+        id: version
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
+          CODE=$((MAJOR * 1000000 + MINOR * 1000 + PATCH))
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "code=$CODE" >> "$GITHUB_OUTPUT"
       - name: Build signed release APK
         env:
+          PASHXXX_VERSION_NAME: ${{ steps.version.outputs.version }}
+          PASHXXX_VERSION_CODE: ${{ steps.version.outputs.code }}
           PASHXXX_KEYSTORE_PATH: ${{ runner.temp }}/pashxxx-release.jks
           PASHXXX_KEYSTORE_PASSWORD: ${{ secrets.PASHXXX_KEYSTORE_PASSWORD }}
           PASHXXX_KEY_ALIAS: ${{ secrets.PASHXXX_KEY_ALIAS }}
