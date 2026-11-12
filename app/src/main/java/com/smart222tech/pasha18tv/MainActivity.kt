@@ -1,7 +1,6 @@
 package com.smart222tech.pasha18tv
 
 import android.os.Bundle
-import android.content.Intent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -53,7 +52,7 @@ private object VideoCatalogRepository {
     fun load(): List<VideoEntry> = emptyList()
 }
 
-private enum class CatalogueTab { HOME, CATALOGUE, FAVORITES }
+private enum class CatalogueTab { HOME, CATALOGUE, FAVORITES, SETTINGS }
 
 private sealed interface Screen {
     data object Catalogue : Screen
@@ -140,8 +139,7 @@ private fun PashxxxApp() {
                 entries = entries,
                 selectedTab = selectedTab,
                 onTabSelected = { selectedTab = it },
-                onOpen = { screen = Screen.Details(it) },
-                onBrowser = { context.startActivity(Intent(context, TvBrowserActivity::class.java)) }
+                onOpen = { screen = Screen.Details(it) }
             )
             is Screen.Details -> DetailsScreen(current.entry,
                 onBack = { screen = Screen.Catalogue },
@@ -156,14 +154,14 @@ private fun CatalogueScreen(
     entries: List<VideoEntry>,
     selectedTab: CatalogueTab,
     onTabSelected: (CatalogueTab) -> Unit,
-    onOpen: (VideoEntry) -> Unit,
-    onBrowser: () -> Unit
+    onOpen: (VideoEntry) -> Unit
 ) {
     val visibleEntries = if (selectedTab == CatalogueTab.FAVORITES) emptyList() else entries
     val pageTitle = when (selectedTab) {
-        CatalogueTab.HOME -> "Открой для себя"
+        CatalogueTab.HOME -> "Главная"
         CatalogueTab.CATALOGUE -> "Каталог видео"
         CatalogueTab.FAVORITES -> "Избранное"
+        CatalogueTab.SETTINGS -> "Настройки"
     }
     Row(Modifier.fillMaxSize().padding(28.dp)) {
         Column(
@@ -177,72 +175,97 @@ private fun CatalogueScreen(
             Text("PASHXXX", fontSize = 27.sp, fontWeight = FontWeight.Black, color = Color.White)
             Text("PRIVATE ENTERTAINMENT", fontSize = 9.sp, color = Accent, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(22.dp))
-            Text("DISCOVER", fontSize = 10.sp, color = Muted, fontWeight = FontWeight.Bold)
-            SideItem("⌂", "Главная", selected = selectedTab == CatalogueTab.HOME) {
-                onTabSelected(CatalogueTab.HOME)
-            }
-            SideItem("▦", "Каталог", selected = selectedTab == CatalogueTab.CATALOGUE) {
-                onTabSelected(CatalogueTab.CATALOGUE)
-            }
-            SideItem("♡", "Избранное", selected = selectedTab == CatalogueTab.FAVORITES) {
-                onTabSelected(CatalogueTab.FAVORITES)
-            }
+            Text("МЕНЮ", fontSize = 10.sp, color = Muted, fontWeight = FontWeight.Bold)
+            SideItem("⌂", "Главная", selected = selectedTab == CatalogueTab.HOME) { onTabSelected(CatalogueTab.HOME) }
+            SideItem("▦", "Каталог", selected = selectedTab == CatalogueTab.CATALOGUE) { onTabSelected(CatalogueTab.CATALOGUE) }
+            SideItem("♡", "Избранное", selected = selectedTab == CatalogueTab.FAVORITES) { onTabSelected(CatalogueTab.FAVORITES) }
             Spacer(Modifier.weight(1f))
+            SideItem("⚙", "Настройки", selected = selectedTab == CatalogueTab.SETTINGS) { onTabSelected(CatalogueTab.SETTINGS) }
             Text("18+  •  PASHXXX", color = Muted, fontSize = 10.sp)
         }
         Spacer(Modifier.width(30.dp))
         Column(Modifier.weight(1f).fillMaxHeight()) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("ТВОЯ ВИДЕОТЕКА", color = Accent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                    Text(pageTitle, color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
-                }
-                Button(onClick = onBrowser, colors = ButtonDefaults.buttonColors(containerColor = Accent)) {
-                    Text("ОТКРЫТЬ БРАУЗЕР", color = Color.White, fontWeight = FontWeight.Bold)
-                }
-            }
-            Spacer(Modifier.height(20.dp))
-            Box(
-                Modifier.fillMaxWidth().height(158.dp).clip(RoundedCornerShape(22.dp))
-                    .background(Brush.linearGradient(listOf(Color(0xFF38263A), Color(0xFF202D42), Color(0xFF141C2A))))
-                    .border(1.dp, Color.White.copy(alpha = .07f), RoundedCornerShape(22.dp))
-                    .padding(26.dp)
-            ) {
-                Column(Modifier.align(Alignment.CenterStart), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("ТВОЙ ПЕРСОНАЛЬНЫЙ КАТАЛОГ", color = Accent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                    Text("Видео. Истории. Впечатления.", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                    Text("Постеры, описание каждой сцены и запуск в нативном плеере", color = Color(0xFFCCD2DC), fontSize = 13.sp)
-                }
-                Text("P", Modifier.align(Alignment.CenterEnd).padding(end = 18.dp),
-                    color = Color.White.copy(alpha = .05f), fontSize = 116.sp, fontWeight = FontWeight.Black)
-            }
-            Spacer(Modifier.height(24.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(if (selectedTab == CatalogueTab.FAVORITES) "Сохранённые видео" else "Каталог видео",
-                    color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.width(10.dp))
-                Text("${visibleEntries.size} ВИДЕО", color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-            }
-            Spacer(Modifier.height(14.dp))
-            if (visibleEntries.isEmpty()) {
-                val emptyTitle = if (selectedTab == CatalogueTab.FAVORITES) "Избранное пока пусто" else "Каталог пока пуст"
-                val emptyDescription = if (selectedTab == CatalogueTab.FAVORITES) {
-                    "Здесь будут отображаться видео, которые вы добавите в избранное. Сохранение появится вместе с подключением реального каталога."
-                } else {
-                    "Нужен разрешённый источник, который предоставляет постеры, описания и прямые ссылки на воспроизведение. Как только он подключён, здесь появятся настоящие карточки видео."
-                }
-                EmptyCatalogue(Modifier.weight(1f), title = emptyTitle, description = emptyDescription)
-            } else {
-                LazyVerticalGrid(
-                    columns = GridCells.Adaptive(minSize = 185.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                    contentPadding = PaddingValues(bottom = 20.dp)
-                ) {
-                    items(visibleEntries, key = { it.id }) { entry -> VideoPosterCard(entry, onClick = { onOpen(entry) }) }
+            Text("PASHXXX  /  ${pageTitle.uppercase()}", color = Accent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            Text(pageTitle, color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(22.dp))
+            when (selectedTab) {
+                CatalogueTab.SETTINGS -> SettingsContent()
+                CatalogueTab.HOME, CatalogueTab.CATALOGUE, CatalogueTab.FAVORITES -> {
+                    Box(
+                        Modifier.fillMaxWidth().height(158.dp).clip(RoundedCornerShape(22.dp))
+                            .background(Brush.linearGradient(listOf(Color(0xFF38263A), Color(0xFF202D42), Color(0xFF141C2A))))
+                            .border(1.dp, Color.White.copy(alpha = .07f), RoundedCornerShape(22.dp))
+                            .padding(26.dp)
+                    ) {
+                        Column(Modifier.align(Alignment.CenterStart), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("ТВОЯ ПЕРСОНАЛЬНАЯ ВИДЕОТЕКА", color = Accent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            Text("Видео. Истории. Впечатления.", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                            Text("Каталог появится после подключения разрешённого источника", color = Color(0xFFCCD2DC), fontSize = 13.sp)
+                        }
+                        Text("P", Modifier.align(Alignment.CenterEnd).padding(end = 18.dp),
+                            color = Color.White.copy(alpha = .05f), fontSize = 116.sp, fontWeight = FontWeight.Black)
+                    }
+                    Spacer(Modifier.height(24.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(if (selectedTab == CatalogueTab.FAVORITES) "Сохранённые видео" else "Каталог видео",
+                            color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.width(10.dp))
+                        Text("${visibleEntries.size} ВИДЕО", color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    }
+                    Spacer(Modifier.height(14.dp))
+                    if (visibleEntries.isEmpty()) {
+                        val favorite = selectedTab == CatalogueTab.FAVORITES
+                        EmptyCatalogue(
+                            Modifier.weight(1f),
+                            title = if (favorite) "Избранное пока пусто" else "Каталог пока пуст",
+                            description = if (favorite)
+                                "Здесь будут ваши сохранённые видео. Сначала нужно подключить реальный каталог."
+                            else
+                                "Приложение пока не подключено к разрешённому каталогу видео. Поэтому здесь нет фальшивых карточек и нерабочих кнопок. Для наполнения нужны официальный API или медиапоток, разрешающий показ постеров, описаний и воспроизведение."
+                        )
+                    } else {
+                        LazyVerticalGrid(
+                            columns = GridCells.Adaptive(minSize = 185.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                            contentPadding = PaddingValues(bottom = 20.dp)
+                        ) {
+                            items(visibleEntries, key = { it.id }) { entry -> VideoPosterCard(entry, onClick = { onOpen(entry) }) }
+                        }
+                    }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SettingsContent() {
+    Column(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp))
+            .background(Panel).border(1.dp, Color.White.copy(alpha = .06f), RoundedCornerShape(22.dp))
+            .padding(26.dp),
+        verticalArrangement = Arrangement.spacedBy(18.dp)
+    ) {
+        Text("ПРИЛОЖЕНИЕ", color = Accent, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        SettingRow("Название", "PASHXXX")
+        SettingRow("Платформа", "Android TV / Google TV")
+        SettingRow("Плеер", "Встроенный Media3")
+        SettingRow("Каталог", "Ожидает подключения источника")
+        SettingRow("Возрастное ограничение", "18+")
+        HorizontalDivider(color = Color.White.copy(alpha = .08f))
+        Text(
+            "Браузер удалён из основного меню. Приложение будет показывать только реальные материалы из источников, которые разрешают их использование.",
+            color = Muted, fontSize = 13.sp, lineHeight = 19.sp
+        )
+    }
+}
+
+@Composable
+private fun SettingRow(label: String, value: String) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+        Text(label, color = Muted, fontSize = 14.sp)
+        Text(value, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
     }
 }
 
