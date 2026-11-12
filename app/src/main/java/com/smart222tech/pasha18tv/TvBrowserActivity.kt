@@ -37,6 +37,15 @@ private const val CURSOR_JS = """
  var x=innerWidth/2,y=innerHeight/2;
  window.__pashxxxMove=function(dx,dy){x=Math.max(1,Math.min(innerWidth-1,x+dx));y=Math.max(1,Math.min(innerHeight-1,y+dy));c.style.left=x+'px';c.style.top=y+'px';};
  window.__pashxxxClick=function(){var e=document.elementFromPoint(x,y);if(!e)return;try{e.dispatchEvent(new MouseEvent('mousemove',{bubbles:true,clientX:x,clientY:y}));e.dispatchEvent(new MouseEvent('mousedown',{bubbles:true,clientX:x,clientY:y}));e.dispatchEvent(new MouseEvent('mouseup',{bubbles:true,clientX:x,clientY:y}));e.click();}catch(err){try{e.click();}catch(ignore){}}};
+ window.__pashxxxPlayFullscreen=function(){
+  var videos=Array.prototype.slice.call(document.querySelectorAll('video'));
+  videos=videos.filter(function(v){var r=v.getBoundingClientRect(),s=getComputedStyle(v);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none';});
+  videos.sort(function(a,b){var ar=a.getBoundingClientRect(),br=b.getBoundingClientRect();return (br.width*br.height)-(ar.width*ar.height);});
+  var v=videos[0];if(!v)return false;
+  try{var p=v.play();if(p&&p.catch)p.catch(function(){});}catch(ignore){}
+  try{if(v.requestFullscreen){var f=v.requestFullscreen();if(f&&f.catch)f.catch(function(){});return true;}if(v.webkitEnterFullscreen){v.webkitEnterFullscreen();return true;}}catch(ignore){}
+  return false;
+ };
 })();
 """
 
@@ -49,6 +58,7 @@ private class PashxxxWebView(context: Context) : WebView(context) {
                 KeyEvent.KEYCODE_DPAD_LEFT -> "window.__pashxxxMove&&window.__pashxxxMove(-44,0)"
                 KeyEvent.KEYCODE_DPAD_RIGHT -> "window.__pashxxxMove&&window.__pashxxxMove(44,0)"
                 KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> "window.__pashxxxClick&&window.__pashxxxClick()"
+                KeyEvent.KEYCODE_MEDIA_PLAY, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> "window.__pashxxxPlayFullscreen&&window.__pashxxxPlayFullscreen()"
                 else -> null
             }
             if (script != null) { evaluateJavascript(script, null); return true }
