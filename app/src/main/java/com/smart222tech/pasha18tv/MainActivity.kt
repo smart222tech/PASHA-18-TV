@@ -83,6 +83,46 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun PashxxxApp() {
     val context = androidx.compose.ui.platform.LocalContext.current
+    var availableUpdate by remember { mutableStateOf<AppUpdate?>(null) }
+    var updateProgress by remember { mutableStateOf<Int?>(null) }
+    var updateError by remember { mutableStateOf<String?>(null) }
+    val updateScope = rememberCoroutineScope()
+    LaunchedEffect(Unit) {
+        availableUpdate = runCatching { AppUpdateManager.check(context) }.getOrNull()
+    }
+    if (availableUpdate != null) {
+        AlertDialog(
+            onDismissRequest = { if (updateProgress == null) availableUpdate = null },
+            title = { Text("Доступно обновление PASHXXX ${availableUpdate!!.versionName}") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Новая версия приложения доступна. APK будет проверен по SHA-256 перед установкой.")
+                    if (updateProgress != null) {
+                        LinearProgressIndicator(progress = { updateProgress!! / 100f }, modifier = Modifier.fillMaxWidth())
+                        Text("Загрузка: ${updateProgress}%")
+                    }
+                    updateError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                }
+            },
+            confirmButton = {
+                TextButton(enabled = updateProgress == null, onClick = {
+                    val update = availableUpdate ?: return@TextButton
+                    updateProgress = 0
+                    updateScope.launch {
+                        runCatching {
+                            AppUpdateManager.downloadAndInstall(context, update) { updateProgress = it }
+                        }.onFailure {
+                            updateError = it.message ?: "Не удалось загрузить обновление"
+                            updateProgress = null
+                        }
+                    }
+                }) { Text(if (updateProgress == null) "Скачать и установить" else "Загрузка…") }
+            },
+            dismissButton = {
+                TextButton(enabled = updateProgress == null, onClick = { availableUpdate = null }) { Text("Позже") }
+            }
+        )
+    }
     var screen by remember { mutableStateOf<Screen>(Screen.Catalogue) }
     var selectedTab by remember { mutableStateOf(CatalogueTab.HOME) }
     val entries = remember { VideoCatalogRepository.load() }
