@@ -35,4 +35,4 @@ jobs:
           name: PASHXXX-v0.5.1-debug
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 90
