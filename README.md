@@ -13,7 +13,7 @@ Native Android TV / Google TV video application built with Kotlin, Jetpack Compo
 
 ## Important integration requirement
 
-A real catalogue needs a provider/API/feed that explicitly permits displaying its posters and descriptions and playing its media URLs. The current catalogue repository is intentionally empty. A separate Android TV browser activity is present with a D-pad air-mouse cursor, HTTP(S) URL bar and HTML5 custom-view fullscreen handling. The remote Play key now attempts playback and fullscreen for a visible HTML5 video; sites that block scripted fullscreen or use non-HTML5 players may not support this. Compatibility still requires device testing.
+A real catalogue needs a provider/API/feed that explicitly permits displaying its posters and descriptions and playing its media URLs. The current catalogue repository is intentionally empty. The browser activity and its menu entry have been removed. The app uses a native Android TV interface with Home, Catalogue, Favorites and Settings. The catalogue remains empty until an authorized metadata and playback feed is configured.
 
 The app will not scrape sites, bypass DRM, authentication, paywalls, age checks, region restrictions, anti-bot controls or provider terms. Only lawful, authorized sources and user-provided media URLs should be integrated.
 
