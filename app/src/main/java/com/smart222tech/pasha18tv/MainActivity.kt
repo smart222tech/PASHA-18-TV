@@ -6,6 +6,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -18,6 +20,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -49,6 +52,8 @@ private object VideoCatalogRepository {
     fun load(): List<VideoEntry> = emptyList()
 }
 
+private enum class CatalogueTab { HOME, CATALOGUE, FAVORITES }
+
 private sealed interface Screen {
     data object Catalogue : Screen
     data class Details(val entry: VideoEntry) : Screen
@@ -79,6 +84,7 @@ class MainActivity : ComponentActivity() {
 private fun PashxxxApp() {
     val context = androidx.compose.ui.platform.LocalContext.current
     var screen by remember { mutableStateOf<Screen>(Screen.Catalogue) }
+    var selectedTab by remember { mutableStateOf(CatalogueTab.HOME) }
     val entries = remember { VideoCatalogRepository.load() }
     BackHandler(enabled = screen !is Screen.Catalogue) {
         screen = when (screen) {
@@ -89,7 +95,13 @@ private fun PashxxxApp() {
     }
     Surface(Modifier.fillMaxSize(), color = Background) {
         when (val current = screen) {
-            Screen.Catalogue -> CatalogueScreen(entries, onOpen = { screen = Screen.Details(it) }, onBrowser = { context.startActivity(Intent(context, TvBrowserActivity::class.java)) })
+            Screen.Catalogue -> CatalogueScreen(
+                entries = entries,
+                selectedTab = selectedTab,
+                onTabSelected = { selectedTab = it },
+                onOpen = { screen = Screen.Details(it) },
+                onBrowser = { context.startActivity(Intent(context, TvBrowserActivity::class.java)) }
+            )
             is Screen.Details -> DetailsScreen(current.entry,
                 onBack = { screen = Screen.Catalogue },
                 onPlay = { screen = Screen.Player(current.entry) })
@@ -99,7 +111,19 @@ private fun PashxxxApp() {
 }
 
 @Composable
-private fun CatalogueScreen(entries: List<VideoEntry>, onOpen: (VideoEntry) -> Unit, onBrowser: () -> Unit) {
+private fun CatalogueScreen(
+    entries: List<VideoEntry>,
+    selectedTab: CatalogueTab,
+    onTabSelected: (CatalogueTab) -> Unit,
+    onOpen: (VideoEntry) -> Unit,
+    onBrowser: () -> Unit
+) {
+    val visibleEntries = if (selectedTab == CatalogueTab.FAVORITES) emptyList() else entries
+    val pageTitle = when (selectedTab) {
+        CatalogueTab.HOME -> "Открой для себя"
+        CatalogueTab.CATALOGUE -> "Каталог видео"
+        CatalogueTab.FAVORITES -> "Избранное"
+    }
     Row(Modifier.fillMaxSize().padding(28.dp)) {
         Column(
             Modifier.width(205.dp).fillMaxHeight()
@@ -113,9 +137,15 @@ private fun CatalogueScreen(entries: List<VideoEntry>, onOpen: (VideoEntry) -> U
             Text("PRIVATE ENTERTAINMENT", fontSize = 9.sp, color = Accent, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(22.dp))
             Text("DISCOVER", fontSize = 10.sp, color = Muted, fontWeight = FontWeight.Bold)
-            SideItem("⌂", "Главная", selected = true)
-            SideItem("▦", "Каталог", selected = false)
-            SideItem("♡", "Избранное", selected = false)
+            SideItem("⌂", "Главная", selected = selectedTab == CatalogueTab.HOME) {
+                onTabSelected(CatalogueTab.HOME)
+            }
+            SideItem("▦", "Каталог", selected = selectedTab == CatalogueTab.CATALOGUE) {
+                onTabSelected(CatalogueTab.CATALOGUE)
+            }
+            SideItem("♡", "Избранное", selected = selectedTab == CatalogueTab.FAVORITES) {
+                onTabSelected(CatalogueTab.FAVORITES)
+            }
             Spacer(Modifier.weight(1f))
             Text("18+  •  PASHXXX", color = Muted, fontSize = 10.sp)
         }
@@ -124,7 +154,7 @@ private fun CatalogueScreen(entries: List<VideoEntry>, onOpen: (VideoEntry) -> U
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text("ТВОЯ ВИДЕОТЕКА", color = Accent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                    Text("Открой для себя", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
+                    Text(pageTitle, color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
                 }
                 Button(onClick = onBrowser, colors = ButtonDefaults.buttonColors(containerColor = Accent)) {
                     Text("ОТКРЫТЬ БРАУЗЕР", color = Color.White, fontWeight = FontWeight.Bold)
@@ -147,13 +177,20 @@ private fun CatalogueScreen(entries: List<VideoEntry>, onOpen: (VideoEntry) -> U
             }
             Spacer(Modifier.height(24.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Каталог видео", color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+                Text(if (selectedTab == CatalogueTab.FAVORITES) "Сохранённые видео" else "Каталог видео",
+                    color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.width(10.dp))
-                Text("${entries.size} ВИДЕО", color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                Text("${visibleEntries.size} ВИДЕО", color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
             }
             Spacer(Modifier.height(14.dp))
-            if (entries.isEmpty()) {
-                EmptyCatalogue(Modifier.weight(1f))
+            if (visibleEntries.isEmpty()) {
+                val emptyTitle = if (selectedTab == CatalogueTab.FAVORITES) "Избранное пока пусто" else "Каталог пока пуст"
+                val emptyDescription = if (selectedTab == CatalogueTab.FAVORITES) {
+                    "Здесь будут отображаться видео, которые вы добавите в избранное. Сохранение появится вместе с подключением реального каталога."
+                } else {
+                    "Нужен разрешённый источник, который предоставляет постеры, описания и прямые ссылки на воспроизведение. Как только он подключён, здесь появятся настоящие карточки видео."
+                }
+                EmptyCatalogue(Modifier.weight(1f), title = emptyTitle, description = emptyDescription)
             } else {
                 LazyVerticalGrid(
                     columns = GridCells.Adaptive(minSize = 185.dp),
@@ -161,7 +198,7 @@ private fun CatalogueScreen(entries: List<VideoEntry>, onOpen: (VideoEntry) -> U
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     contentPadding = PaddingValues(bottom = 20.dp)
                 ) {
-                    items(entries, key = { it.id }) { entry -> VideoPosterCard(entry, onClick = { onOpen(entry) }) }
+                    items(visibleEntries, key = { it.id }) { entry -> VideoPosterCard(entry, onClick = { onOpen(entry) }) }
                 }
             }
         }
@@ -169,10 +206,29 @@ private fun CatalogueScreen(entries: List<VideoEntry>, onOpen: (VideoEntry) -> U
 }
 
 @Composable
-private fun SideItem(symbol: String, label: String, selected: Boolean) {
+private fun SideItem(symbol: String, label: String, selected: Boolean, onClick: () -> Unit) {
+    var focused by remember { mutableStateOf(false) }
+    val itemBackground by animateColorAsState(
+        targetValue = when {
+            focused -> Color(0xFF3B2631)
+            selected -> Color(0xFF30394A)
+            else -> Color.Transparent
+        },
+        animationSpec = tween(durationMillis = 140),
+        label = "sideItemBackground"
+    )
+    val itemBorder by animateColorAsState(
+        targetValue = if (focused) Accent else if (selected) Accent.copy(alpha = .42f) else Color.Transparent,
+        animationSpec = tween(durationMillis = 140),
+        label = "sideItemBorder"
+    )
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
-            .background(if (selected) Color(0xFF30394A) else Color.Transparent)
+        Modifier.fillMaxWidth()
+            .onFocusChanged { focused = it.isFocused }
+            .clip(RoundedCornerShape(12.dp))
+            .background(itemBackground)
+            .border(if (focused) 2.dp else 1.dp, itemBorder, RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 13.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -184,7 +240,11 @@ private fun SideItem(symbol: String, label: String, selected: Boolean) {
 }
 
 @Composable
-private fun EmptyCatalogue(modifier: Modifier = Modifier) {
+private fun EmptyCatalogue(
+    modifier: Modifier = Modifier,
+    title: String = "Каталог пока пуст",
+    description: String = "Нужен разрешённый источник, который предоставляет постеры, описания и прямые ссылки на воспроизведение. Как только он подключён, здесь появятся настоящие карточки видео."
+) {
     Box(
         modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp))
             .background(Panel).border(1.dp, Color.White.copy(alpha = .055f), RoundedCornerShape(22.dp))
@@ -197,11 +257,8 @@ private fun EmptyCatalogue(modifier: Modifier = Modifier) {
                     .background(Brush.linearGradient(listOf(Color(0xFF493044), Color(0xFF26374B)))),
                 contentAlignment = Alignment.Center
             ) { Text("▶", color = Accent, fontSize = 24.sp) }
-            Text("Каталог пока пуст", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-            Text(
-                "Нужен разрешённый источник, который предоставляет постеры, описания и прямые ссылки на воспроизведение. Как только он подключён, здесь появятся карточки видео.",
-                color = Muted, fontSize = 13.sp, lineHeight = 19.sp
-            )
+            Text(title, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text(description, color = Muted, fontSize = 13.sp, lineHeight = 19.sp)
         }
     }
 }
