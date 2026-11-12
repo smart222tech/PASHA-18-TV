@@ -18,6 +18,25 @@ android {
         versionName = "0.5.1"
     }
 
+    signingConfigs {
+        create("release") {
+            val storePath = System.getenv("PASHXXX_KEYSTORE_PATH")
+            if (!storePath.isNullOrBlank()) {
+                storeFile = file(storePath)
+                storePassword = System.getenv("PASHXXX_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("PASHXXX_KEY_ALIAS")
+                keyPassword = System.getenv("PASHXXX_KEY_PASSWORD")
+            }
+        }
+    }
+
+    buildTypes {
+        getByName("release") {
+            signingConfig = signingConfigs.getByName("release")
+            isMinifyEnabled = false
+        }
+    }
+
     buildFeatures { compose = true }
 
     compileOptions {
