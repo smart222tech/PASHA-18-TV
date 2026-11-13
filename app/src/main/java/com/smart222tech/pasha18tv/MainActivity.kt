@@ -107,10 +107,19 @@ private fun PashxxxApp() {
             confirmButton = {
                 TextButton(enabled = updateProgress == null, onClick = {
                     val update = availableUpdate ?: return@TextButton
+                    updateError = null
                     updateProgress = 0
                     updateScope.launch {
                         runCatching {
-                            AppUpdateManager.downloadAndInstall(context, update) { updateProgress = it }
+                            val installerOpened = AppUpdateManager.downloadAndInstall(context, update) {
+                                updateProgress = it
+                            }
+                            updateProgress = null
+                            if (installerOpened) {
+                                availableUpdate = null
+                            } else {
+                                updateError = "Разреши установку неизвестных приложений для PASHXXX в настройках Android, вернись сюда и нажми кнопку ещё раз."
+                            }
                         }.onFailure {
                             updateError = it.message ?: "Не удалось загрузить обновление"
                             updateProgress = null
