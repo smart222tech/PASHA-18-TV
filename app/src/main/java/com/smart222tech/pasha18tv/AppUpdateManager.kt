@@ -73,7 +73,21 @@ object AppUpdateManager {
         context: Context,
         update: AppUpdate,
         onProgress: (Int) -> Unit
-    ) = withContext(Dispatchers.IO) {
+    ): Boolean = withContext(Dispatchers.IO) {
+        // Request the Android install permission before downloading a potentially large APK.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+            !context.packageManager.canRequestPackageInstalls()
+        ) {
+            withContext(Dispatchers.Main) {
+                val settings = Intent(
+                    Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                    Uri.parse("package:${context.packageName}")
+                ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                context.startActivity(settings)
+            }
+            return@withContext false
+        }
+
         val directory = File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), "updates")
         if (!directory.exists()) directory.mkdirs()
         val apk = File(directory, "PASHXXX-${update.versionName}.apk")
@@ -88,39 +102,54 @@ object AppUpdateManager {
         val manager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
         val id = manager.enqueue(request)
         var finished = false
-        while (!finished) {
-            val cursor = manager.query(DownloadManager.Query().setFilterById(id))
-            cursor.use {
-                if (it != null && it.moveToFirst()) {
-                    val status = it.getInt(it.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
-                    val total = it.getLong(it.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
-                    val soFar = it.getLong(it.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
-                    if (total > 0) onProgress(((soFar * 100) / total).toInt().coerceIn(0, 100))
-                    when (status) {
-                        DownloadManager.STATUS_SUCCESSFUL -> finished = true
-                        DownloadManager.STATUS_FAILED -> error("GitHub APK download failed")
-                    }
-                } else error("Download task disappeared")
+        try {
+            while (!finished) {
+                val cursor = manager.query(DownloadManager.Query().setFilterById(id))
+                cursor.use {
+                    if (it != null && it.moveToFirst()) {
+                        val status = it.getInt(it.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
+                        val total = it.getLong(it.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
+                        val soFar = it.getLong(it.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
+                        if (total > 0) {
+                            val progress = ((soFar * 100) / total).toInt().coerceIn(0, 100)
+                            withContext(Dispatchers.Main) { onProgress(progress) }
+                        }
+                        when (status) {
+                            DownloadManager.STATUS_SUCCESSFUL -> finished = true
+                            DownloadManager.STATUS_FAILED -> {
+                                val reason = it.getInt(it.getColumnIndexOrThrow(DownloadManager.COLUMN_REASON))
+                                error("GitHub APK download failed (reason $reason)")
+                            }
+                        }
+                    } else error("Download task disappeared")
+                }
+                if (!finished) delay(500)
             }
-            if (!finished) delay(500)
-        }
-        val actualHash = MessageDigest.getInstance("SHA-256").digest(apk.readBytes())
-            .joinToString("") { "%02x".format(it) }
-        check(actualHash.equals(update.sha256, ignoreCase = true)) {
+        } catch (failure: Throwable) {
+            manager.remove(id)
             apk.delete()
-            "SHA-256 verification failed; APK was not installed"
+            throw failure
         }
-        withContext(Dispatchers.Main) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
-                !context.packageManager.canRequestPackageInstalls()
-            ) {
-                val settings = Intent(
-                    Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-                    Uri.parse("package:${context.packageName}")
-                ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                context.startActivity(settings)
-                return@withContext
+
+        // Stream the APK through SHA-256 instead of loading the entire file into RAM.
+        val digest = MessageDigest.getInstance("SHA-256")
+        apk.inputStream().buffered().use { input ->
+            val buffer = ByteArray(64 * 1024)
+            while (true) {
+                val count = input.read(buffer)
+                if (count < 0) break
+                digest.update(buffer, 0, count)
             }
+        }
+        val actualHash = digest.digest().joinToString("") { byte ->
+            "%02x".format(byte.toInt() and 0xff)
+        }
+        if (!actualHash.equals(update.sha256, ignoreCase = true)) {
+            apk.delete()
+            error("SHA-256 verification failed; APK was not installed")
+        }
+
+        withContext(Dispatchers.Main) {
             val uri = FileProvider.getUriForFile(
                 context, "${context.packageName}.fileprovider", apk
             )
@@ -128,5 +157,6 @@ object AppUpdateManager {
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
             context.startActivity(install)
         }
+        true
     }
 }
