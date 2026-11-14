@@ -14,8 +14,8 @@ android {
         applicationId = "com.smart222tech.pashxxx"
         minSdk = 23
         targetSdk = 35
-        versionCode = System.getenv("PASHXXX_VERSION_CODE")?.toIntOrNull() ?: 11
-        versionName = System.getenv("PASHXXX_VERSION_NAME") ?: "0.5.3"
+        versionCode = System.getenv("PASHXXX_VERSION_CODE")?.toIntOrNull() ?: 12
+        versionName = System.getenv("PASHXXX_VERSION_NAME") ?: "0.5.4"
     }
 
     signingConfigs {
