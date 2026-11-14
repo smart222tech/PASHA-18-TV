@@ -91,7 +91,8 @@ private object AdultEmbedRepository {
             VideoEntry(id, item.optString("title").ifBlank { "Видео #"+id }, item.optString("description"), item.optString("thumbnail"), "$API/player/embed/$id/", cat, item.optString("duration"))
         }
         return VideoPage(items, !json.isNull("next") && json.optString("next").isNotBlank(), !json.isNull("previous") && json.optString("previous").isNotBlank(), json.optInt("count", items.size))
-    }}
+    }
+}
 
 private enum class Tab { HOME, CATALOGUE, FAVORITES, SETTINGS }
 private sealed interface Page {
@@ -167,7 +168,7 @@ private fun PashxxxApp() {
                 accepted18 = true; prefs.edit().putBoolean("age_ok", true).apply()
                 scope.launch {
                     loading = true
-                    try { categories = AdultEmbedRepository.categories(); videos = AdultEmbedRepository.videos() }
+                    try { categories = AdultEmbedRepository.categories(); val result = AdultEmbedRepository.videos(); videos = result.items; hasNextPage = result.hasNext; hasPreviousPage = result.hasPrevious; totalVideos = result.total; catalogPage = 1 }
                     catch (t: Throwable) { error = "Ошибка каталога: ${t.message}" }
                     finally { loading = false }
                 }
@@ -234,6 +235,13 @@ private fun PashxxxApp() {
                             error?.let { Text(it, color = Color(0xFFFF9A82)) }
                             val shown = if (tab == Tab.FAVORITES) videos.filter { it.id in favorites } else videos
                             Text(shown.size.toString() + " видео · страница " + catalogPage + " · всего " + totalVideos, color = Muted, fontSize = 12.sp)
+if (tab != Tab.FAVORITES) {
+    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+        OutlinedButton(onClick = { if (hasPreviousPage) loadCatalog(search, selectedCategory, catalogPage - 1) }, enabled = hasPreviousPage && !loading) { Text("‹ Предыдущая") }
+        Text("Страница " + catalogPage, color = Color.White, fontWeight = FontWeight.Bold)
+        Button(onClick = { if (hasNextPage) loadCatalog(search, selectedCategory, catalogPage + 1) }, enabled = hasNextPage && !loading) { Text("Следующая ›") }
+    }
+}
                             Spacer(Modifier.height(8.dp))
                             if (!loading && shown.isEmpty() && error == null) {
                                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
