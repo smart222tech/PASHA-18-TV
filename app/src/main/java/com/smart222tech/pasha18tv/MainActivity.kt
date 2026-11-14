@@ -381,9 +381,11 @@ private fun openExternal(context: android.content.Context, video: VideoEntry, pa
 @Composable
 private fun EmbeddedPlayer(video: VideoEntry, onBack: () -> Unit) {
     BackHandler { onBack() }
+    var playerWebView by remember { mutableStateOf<WebView?>(null) }
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         AndroidView(factory = { ctx ->
             WebView(ctx).apply {
+                playerWebView = this
                 settings.javaScriptEnabled = true
                 settings.domStorageEnabled = true
                 settings.databaseEnabled = true
@@ -416,7 +418,10 @@ private fun EmbeddedPlayer(video: VideoEntry, onBack: () -> Unit) {
         }
         Button(
             onClick = {
-                // A real D-pad focusable retry action; no mouse cursor is required.
+                playerWebView?.evaluateJavascript(
+                    "(function(){var v=document.querySelector('video');if(v){v.muted=false;v.play().catch(function(){v.muted=true;v.play().catch(function(){});});}else{var b=document.querySelector('button,[role=button]');if(b)b.click();}})()",
+                    null
+                )
             },
             modifier = Modifier.align(Alignment.Center).padding(12.dp)
         ) { Text("▶  Воспроизвести") }
