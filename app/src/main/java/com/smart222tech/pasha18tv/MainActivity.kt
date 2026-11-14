@@ -153,7 +153,9 @@ private fun PashxxxApp() {
         page = when (val p = page) { is Page.Player -> Page.Details(p.video); is Page.Details -> Page.Browse; Page.Browse -> Page.Browse }
     }
 
-    if (language.isBlank()) {\n        AlertDialog(onDismissRequest = {}, title = { Text("PASHXXX — Выбор языка / Language / Sprache") }, text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) { Text("Выбери язык приложения") ; listOf("Русский" to "ru", "English" to "en", "Deutsch" to "de").forEach { (label, code) -> Button(onClick = { language = code; prefs.edit().putString("language", code).apply() }, modifier = Modifier.fillMaxWidth()) { Text(label) } } } }, confirmButton = {})\n    } else if (!accepted18) {
+    if (language.isBlank()) {
+        AlertDialog(onDismissRequest = {}, title = { Text("PASHXXX — Выбор языка / Language / Sprache") }, text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) { Text("Выбери язык приложения") ; listOf("Русский" to "ru", "English" to "en", "Deutsch" to "de").forEach { (label, code) -> Button(onClick = { language = code; prefs.edit().putString("language", code).apply() }, modifier = Modifier.fillMaxWidth()) { Text(label) } } } }, confirmButton = {})
+    } else if (!accepted18) {
         AlertDialog(
             onDismissRequest = {},
             title = { Text("PASHXXX — 18+") },
