@@ -3,6 +3,8 @@ package com.smart222tech.pasha18tv
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Intent
+import android.content.ActivityNotFoundException
+import android.widget.Toast
 import android.net.Uri
 import android.view.View
 import android.view.ViewGroup
@@ -32,6 +34,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -42,6 +47,7 @@ import androidx.compose.ui.layout.ContentScale
 import coil.compose.AsyncImage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.HttpURLConnection
@@ -103,7 +109,7 @@ private object AdultEmbedRepository {
     }
 }
 
-private enum class Tab { HOME, FAVORITES, SETTINGS }
+private enum class Tab { HOME, SEARCH, FAVORITES, SETTINGS }
 private sealed interface Page {
     data object Browse : Page
     data class Details(val video: VideoEntry) : Page
@@ -141,6 +147,9 @@ private fun PashxxxApp() {
     var accepted18 by remember { mutableStateOf(prefs.getBoolean("age_ok", false)) }
     var language by remember { mutableStateOf(prefs.getString("language", "") ?: "") }
     var menuVisible by remember { mutableStateOf(true) }
+    var showPlayerChooser by remember { mutableStateOf(false) }
+    val firstVideoFocusRequester = remember { FocusRequester() }
+    val searchFocusRequester = remember { FocusRequester() }
     var externalPlayer by remember { mutableStateOf(prefs.getString("external_player", "builtin") ?: "builtin") }
     val scope = rememberCoroutineScope()
 
@@ -156,6 +165,15 @@ private fun PashxxxApp() {
                 totalVideos = result.total
             } catch (t: Throwable) { error = "Не удалось загрузить каталог: " + (t.message ?: "ошибка сети") }
             finally { loading = false }
+        }
+    }
+    LaunchedEffect(tab, menuVisible, videos.size) {
+        if (!menuVisible && tab == Tab.HOME && videos.isNotEmpty()) {
+            delay(180)
+            runCatching { firstVideoFocusRequester.requestFocus() }
+        } else if (!menuVisible && tab == Tab.SEARCH) {
+            delay(180)
+            runCatching { searchFocusRequester.requestFocus() }
         }
     }
     LaunchedEffect(Unit) {
@@ -200,6 +218,7 @@ private fun PashxxxApp() {
                     Text("PRIVATE VIDEO LIBRARY", color = Accent, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(18.dp))
                     NavItem("⌂", tr(language, "Главная", "Home"), tab == Tab.HOME) { tab = Tab.HOME; menuVisible = false; selectedCategory = ""; loadCatalog("", "") }
+                    NavItem("⌕", tr(language, "Поиск", "Search"), tab == Tab.SEARCH) { tab = Tab.SEARCH; menuVisible = false }
                     NavItem("♡", tr(language, "Избранное", "Favorites"), tab == Tab.FAVORITES) { tab = Tab.FAVORITES; menuVisible = false }
                     Spacer(Modifier.weight(1f))
                     NavItem("⚙", tr(language, "Настройки", "Settings"), tab == Tab.SETTINGS) { tab = Tab.SETTINGS; menuVisible = false }
@@ -241,17 +260,19 @@ private fun PashxxxApp() {
                             Text(if (tab == Tab.FAVORITES) tr(language, "Избранное", "Favorites") else tr(language, "Главная", "Home"),
                                 color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
                             Spacer(Modifier.height(12.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).background(Panel).padding(horizontal = 14.dp, vertical = 12.dp)) {
-                                    if (search.isEmpty()) Text(tr(language, "Поиск по каталогу…", "Search videos…"), color = Muted)
-                                    BasicTextField(value = search, onValueChange = { search = it },
-                                        textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 15.sp),
-                                        singleLine = true, modifier = Modifier.fillMaxWidth())
+                            if (tab == Tab.SEARCH) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).background(Panel).padding(horizontal = 14.dp, vertical = 12.dp)) {
+                                        if (search.isEmpty()) Text(tr(language, "Поиск по каталогу…", "Search videos…"), color = Muted)
+                                        BasicTextField(value = search, onValueChange = { search = it },
+                                            textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 18.sp),
+                                            singleLine = true, modifier = Modifier.fillMaxWidth().focusRequester(searchFocusRequester))
+                                    }
+                                    Spacer(Modifier.width(10.dp))
+                                    Button(onClick = { loadCatalog(search, selectedCategory, 1); tab = Tab.HOME }, modifier = Modifier.height(48.dp)) { Text(tr(language, "Найти", "Search")) }
                                 }
-                                Spacer(Modifier.width(10.dp))
-                                Button(onClick = { tab = Tab.HOME; menuVisible = false; loadCatalog() }) { Text(tr(language, "Найти", "Search")) }
+                                Spacer(Modifier.height(12.dp))
                             }
-                            Spacer(Modifier.height(12.dp))
                             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 item { FilterChip(selected = selectedCategory.isEmpty(), onClick = { selectedCategory = ""; tab = Tab.HOME; loadCatalog() }, label = { Text(tr(language, "Все", "All")) }) }
                                 items(categories) { cat ->
@@ -284,7 +305,8 @@ if (tab != Tab.FAVORITES) {
                                     verticalArrangement = Arrangement.spacedBy(14.dp),
                                     contentPadding = PaddingValues(bottom = 20.dp)) {
                                     items(shown, key = { it.id }) { video ->
-                                        VideoCard(video) { page = Page.Details(video) }
+                                        val isFirst = video.id == shown.firstOrNull()?.id
+                                        VideoCard(video, modifier = if (isFirst && tab != Tab.FAVORITES) Modifier.focusRequester(firstVideoFocusRequester) else Modifier) { page = Page.Details(video); showPlayerChooser = false }
                                     }
                                 }
                             }
@@ -309,19 +331,27 @@ if (tab != Tab.FAVORITES) {
                         Text(video.synopsis, color = Color(0xFFD2D8E2), fontSize = 15.sp)
                         Spacer(Modifier.height(20.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Button(onClick = {
-                                if (externalPlayer == "builtin") page = Page.Player(video)
-                                else {
-                                    val pkg = if (externalPlayer == "vlc") "org.videolan.vlc" else "com.mxtech.videoplayer.ad"
-                                    try { val i = Intent(Intent.ACTION_VIEW, Uri.parse(video.playerUrl)).setPackage(pkg); context.startActivity(i) }
-                                    catch (_: Exception) { page = Page.Player(video) }
-                                }
-                            }) { Text(tr(language, "▶ Смотреть", "▶ Watch"), color = Color.Black) }
+                            Button(onClick = { showPlayerChooser = true }) { Text(tr(language, "▶ Смотреть", "▶ Watch"), color = Color.Black) }
                             OutlinedButton(onClick = {
                                 favorites = if (video.id in favorites) favorites - video.id else favorites + video.id
                                 prefs.edit().putStringSet("ids", favorites).apply()
                             }) { Text(if (video.id in favorites) tr(language, "♥ В избранном", "♥ Saved") else tr(language, "♡ В избранное", "♡ Add to favourites"), color = FocusLight) }
                         }
+                    }
+                    if (showPlayerChooser) {
+                        AlertDialog(
+                            onDismissRequest = { showPlayerChooser = false },
+                            title = { Text(tr(language, "Выбор плеера", "Choose player")) },
+                            text = { Text(tr(language, "Предпочтение из настроек: " + when (externalPlayer) { "vlc" -> "VLC"; "mx" -> "MX Player"; else -> "Встроенный" } + ". AdultEmbed передаёт страницу iframe, а не прямой видеофайл. VLC/MX Player могут не поддерживать такую ссылку.", "Preferred in Settings: " + when (externalPlayer) { "vlc" -> "VLC"; "mx" -> "MX Player"; else -> "Built-in" } + ". AdultEmbed provides an iframe page, not a direct video file. VLC/MX Player may not support this link.")) },
+                            confirmButton = {
+                                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Button(onClick = { showPlayerChooser = false; page = Page.Player(video) }, modifier = Modifier.fillMaxWidth()) { Text(tr(language, "Встроенный плеер", "Built-in player")) }
+                                    OutlinedButton(onClick = { showPlayerChooser = false; openExternal(context, video, "org.videolan.vlc", tr(language, "VLC не установлен или не поддерживает ссылку. Открываю встроенный плеер.", "VLC is missing or cannot handle this link. Opening built-in player.")) { page = Page.Player(video) } }, modifier = Modifier.fillMaxWidth()) { Text("VLC") }
+                                    OutlinedButton(onClick = { showPlayerChooser = false; openExternal(context, video, "com.mxtech.videoplayer.ad", tr(language, "MX Player не установлен или не поддерживает ссылку. Открываю встроенный плеер.", "MX Player is missing or cannot handle this link. Opening built-in player.")) { page = Page.Player(video) } }, modifier = Modifier.fillMaxWidth()) { Text("MX Player") }
+                                }
+                            },
+                            dismissButton = { TextButton(onClick = { showPlayerChooser = false }) { Text(tr(language, "Отмена", "Cancel")) } }
+                        )
                     }
                 }
             }
@@ -344,15 +374,29 @@ private fun NavItem(icon: String, label: String, selected: Boolean, onClick: () 
 }
 
 @Composable
-private fun VideoCard(video: VideoEntry, onClick: () -> Unit) {
+private fun VideoCard(video: VideoEntry, modifier: Modifier = Modifier, onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
-    Column(Modifier.onFocusChanged { focused = it.isFocused }.border(if (focused) 4.dp else 1.dp, if (focused) FocusLight else Color(0xFF263246), RoundedCornerShape(14.dp)).clip(RoundedCornerShape(14.dp)).background(if (focused) FocusLight else Color.Black).clickable(onClick = onClick).padding(if (focused) 2.dp else 0.dp)) {
+    Column(modifier.onFocusChanged { focused = it.isFocused }.focusable().border(if (focused) 4.dp else 1.dp, if (focused) FocusLight else Color(0xFF263246), RoundedCornerShape(14.dp)).clip(RoundedCornerShape(14.dp)).background(if (focused) FocusLight else Color.Black).clickable(onClick = onClick).padding(if (focused) 2.dp else 0.dp)) {
         AsyncImage(model = video.posterUrl, contentDescription = video.title,
             modifier = Modifier.fillMaxWidth().aspectRatio(.72f), contentScale = ContentScale.Crop)
         Column(Modifier.padding(10.dp)) {
             Text(video.title, color = if (focused) Color.Black else Color.White, fontWeight = FontWeight.Bold, maxLines = 2, minLines = 2)
             Text("${video.category}  •  ${video.duration}", color = if (focused) Color.DarkGray else Muted, fontSize = 10.sp, maxLines = 1)
         }
+    }
+}
+
+private fun openExternal(context: android.content.Context, video: VideoEntry, packageName: String, fallbackMessage: String, fallback: () -> Unit) {
+    try {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(video.playerUrl)).setPackage(packageName)
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(intent)
+    } catch (_: ActivityNotFoundException) {
+        Toast.makeText(context, fallbackMessage, Toast.LENGTH_LONG).show()
+        fallback()
+    } catch (_: Exception) {
+        Toast.makeText(context, fallbackMessage, Toast.LENGTH_LONG).show()
+        fallback()
     }
 }
 
@@ -378,7 +422,7 @@ private fun EmbeddedPlayer(video: VideoEntry, onBack: () -> Unit) {
                 isFocusableInTouchMode = true
                 webChromeClient = WebChromeClient()
                 webViewClient = WebViewClient()
-                val html = """<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"></head><body style="margin:0;background:#000;overflow:hidden"><iframe src="${video.playerUrl}?autoplay=1" style="position:fixed;inset:0;width:100%;height:100%;border:0" allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowfullscreen></iframe></body></html>"""
+                val html = """<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"></head><body style="margin:0;background:#000;overflow:hidden"><iframe src="${video.playerUrl}?autoplay=1&muted=1" style="position:fixed;inset:0;width:100%;height:100%;border:0" allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowfullscreen></iframe></body></html>"""
                 loadDataWithBaseURL("https://adultembed.com/", html, "text/html", "UTF-8", null)
             }
         }, modifier = Modifier.fillMaxSize())
