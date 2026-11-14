@@ -2,7 +2,7 @@
 
 Native Android TV / Google TV video application built with Kotlin, Jetpack Compose and AndroidX Media3.
 
-## Current native catalogue foundation: 0.5.2 (versionCode 10)
+## Current native catalogue foundation: 0.5.3 (versionCode 11)
 
 - PASHXXX launcher identity and application ID: `com.smart222tech.pashxxx`.
 - Native Compose catalogue layout with selectable Home / Catalogue / Favorites sections, video-card, details and Media3 playback foundations.
@@ -19,11 +19,13 @@ The app will not scrape sites, bypass DRM, authentication, paywalls, age checks,
 
 ## Build
 
-GitHub Actions workflow: **Build PASHXXX APK** (artifact: `PASHXXX-v0.5.2-debug`).
+GitHub Actions workflow: **Build PASHXXX APK** (artifact: `PASHXXX-v0.5.3-debug`, retained for 90 days).
+
+The workflow verifies the APK archive and checks the embedded application ID, version name and version code before uploading it.
 
 - Application ID: `com.smart222tech.pashxxx`
 - Kotlin namespace (kept stable for Activity compatibility): `com.smart222tech.pasha18tv`
-- Version: `0.5.2` (versionCode 9)
+- Version: `0.5.3` (versionCode 11)
 - Minimum Android: API 23
 - Target Android: API 35
 - JDK: 17

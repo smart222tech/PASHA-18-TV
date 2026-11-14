@@ -28,11 +28,29 @@ jobs:
         with:
           gradle-version: "8.9"
       - name: Build debug APK
+        env:
+          PASHXXX_VERSION_NAME: "0.5.3"
+          PASHXXX_VERSION_CODE: "11"
         run: gradle --no-daemon --stacktrace assembleDebug
+      - name: Verify installable APK identity
+        env:
+          EXPECTED_APPLICATION_ID: "com.smart222tech.pashxxx"
+          EXPECTED_VERSION_NAME: "0.5.3"
+          EXPECTED_VERSION_CODE: "11"
+        run: |
+          set -euo pipefail
+          APK="app/build/outputs/apk/debug/app-debug.apk"
+          test -s "$APK"
+          AAPT="$(find "${ANDROID_HOME:?ANDROID_HOME is not set}" -type f -path '*/build-tools/*/aapt' | sort -V | tail -n 1)"
+          test -n "$AAPT"
+          "$AAPT" dump badging "$APK" > "$RUNNER_TEMP/pashxxx-badging.txt"
+          grep -F "package: name='${EXPECTED_APPLICATION_ID}'" "$RUNNER_TEMP/pashxxx-badging.txt" | grep -F "versionCode='${EXPECTED_VERSION_CODE}'" | grep -F "versionName='${EXPECTED_VERSION_NAME}'"
+          unzip -t "$APK" >/dev/null
+          echo "Verified APK size: $(stat -c%s "$APK") bytes"
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: PASHXXX-v0.5.2-debug
+          name: PASHXXX-v0.5.3-debug
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 90
