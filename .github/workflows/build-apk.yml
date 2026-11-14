@@ -29,14 +29,14 @@ jobs:
           gradle-version: "8.9"
       - name: Build debug APK
         env:
-          PASHXXX_VERSION_NAME: "0.5.5"
-          PASHXXX_VERSION_CODE: "13"
+          PASHXXX_VERSION_NAME: "0.5.6"
+          PASHXXX_VERSION_CODE: "14"
         run: gradle --no-daemon --stacktrace assembleDebug
       - name: Verify installable APK identity
         env:
           EXPECTED_APPLICATION_ID: "com.smart222tech.pashxxx"
-          EXPECTED_VERSION_NAME: "0.5.5"
-          EXPECTED_VERSION_CODE: "13"
+          EXPECTED_VERSION_NAME: "0.5.6"
+          EXPECTED_VERSION_CODE: "14"
         run: |
           set -euo pipefail
           APK="app/build/outputs/apk/debug/app-debug.apk"
@@ -50,7 +50,7 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: PASHXXX-v0.5.4-debug
+          name: PASHXXX-v0.5.6-debug
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 90
