@@ -183,7 +183,7 @@ private fun PashxxxApp() {
         }
     }
     BackHandler(enabled = page !is Page.Browse) {
-        page = when (val p = page) { is Page.Player -> Page.Details(p.video); is Page.Details -> Page.Browse; Page.Browse -> Page.Browse }
+        page = when (val p = page) { is Page.Player -> Page.Browse; is Page.Details -> Page.Browse; Page.Browse -> Page.Browse }
     }
 
     if (language.isBlank()) {
@@ -257,7 +257,7 @@ private fun PashxxxApp() {
                             OutlinedButton(onClick = { accepted18 = false; prefs.edit().putBoolean("age_ok", false).apply() }) { Text(tr(language, "Сбросить подтверждение возраста", "Reset age confirmation")) }
                         }
                         else -> {
-                            Text(if (tab == Tab.FAVORITES) tr(language, "Избранное", "Favorites") else tr(language, "Главная", "Home"),
+                            Text(if (tab == Tab.FAVORITES) tr(language, "Избранное", "Favorites") else if (tab == Tab.SEARCH) tr(language, "Поиск", "Search") else tr(language, "Главная", "Home"),
                                 color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
                             Spacer(Modifier.height(12.dp))
                             if (tab == Tab.SEARCH) {
@@ -306,7 +306,15 @@ if (tab != Tab.FAVORITES) {
                                     contentPadding = PaddingValues(bottom = 20.dp)) {
                                     items(shown, key = { it.id }) { video ->
                                         val isFirst = video.id == shown.firstOrNull()?.id
-                                        VideoCard(video, modifier = if (isFirst && tab != Tab.FAVORITES) Modifier.focusRequester(firstVideoFocusRequester) else Modifier) { page = Page.Details(video); showPlayerChooser = false }
+                                        VideoCard(video, modifier = if (isFirst && tab != Tab.FAVORITES) Modifier.focusRequester(firstVideoFocusRequester) else Modifier) {
+                                            if (externalPlayer == "builtin") {
+                                                page = Page.Player(video)
+                                            } else {
+                                                val pkg = if (externalPlayer == "vlc") "org.videolan.vlc" else "com.mxtech.videoplayer.ad"
+                                                val playerName = if (externalPlayer == "vlc") "VLC" else "MX Player"
+                                                openExternal(context, video, pkg, tr(language, "$playerName не установлен или не может открыть iframe-ссылку AdultEmbed. Запускаю встроенный плеер.", "$playerName is not installed or cannot open the AdultEmbed iframe URL. Starting built-in player.")) { page = Page.Player(video) }
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -355,7 +363,7 @@ if (tab != Tab.FAVORITES) {
                     }
                 }
             }
-            is Page.Player -> EmbeddedPlayer(current.video) { page = Page.Details(current.video) }
+            is Page.Player -> EmbeddedPlayer(current.video) { page = Page.Browse }
         }
     }
 }
