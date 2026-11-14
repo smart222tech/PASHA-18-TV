@@ -283,7 +283,7 @@ if (tab != Tab.FAVORITES) {
                                     contentPadding = PaddingValues(bottom = 20.dp)) {
                                     items(shown, key = { it.id }) { video ->
                                         val isFirst = video.id == shown.firstOrNull()?.id
-                                        VideoCard(video, modifier = if (isFirst && tab != Tab.FAVORITES) Modifier.focusRequester(firstVideoFocusRequester) else Modifier) {
+                                        VideoCard(video, modifier = if (isFirst) Modifier.focusRequester(firstVideoFocusRequester) else Modifier) {
                                         page = Page.Player(video)
                                     }
                                     }
