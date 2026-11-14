@@ -253,10 +253,10 @@ private fun PashxxxApp() {
                             }
                             Spacer(Modifier.height(12.dp))
                             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                item { FilterChip(selected = selectedCategory.isEmpty(), onClick = { selectedCategory = ""; tab = Tab.CATALOGUE; loadCatalog() }, label = { Text(tr(language, "Все", "All")) }) }
+                                item { FilterChip(selected = selectedCategory.isEmpty(), onClick = { selectedCategory = ""; tab = Tab.HOME; loadCatalog() }, label = { Text(tr(language, "Все", "All")) }) }
                                 items(categories) { cat ->
                                     FilterChip(selected = selectedCategory == cat.slug, onClick = {
-                                        selectedCategory = cat.slug; tab = Tab.CATALOGUE; loadCatalog()
+                                        selectedCategory = cat.slug; tab = Tab.HOME; loadCatalog()
                                     }, label = { Text("${cat.name} · ${cat.count}") })
                                 }
                             }
