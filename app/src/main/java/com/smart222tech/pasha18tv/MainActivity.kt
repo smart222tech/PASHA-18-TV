@@ -1,79 +1,116 @@
 package com.smart222tech.pasha18tv
 
+import android.annotation.SuppressLint
 import android.os.Bundle
+import android.webkit.WebChromeClient
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.media3.common.MediaItem
-import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.ui.PlayerView
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
 
-private val Background = Color(0xFF080B12)
+private val Bg = Color(0xFF080B12)
 private val Panel = Color(0xFF151C29)
 private val Muted = Color(0xFF98A4B7)
 private val Accent = Color(0xFFFF6B45)
+private const val API = "https://adultembed.com"
 
-/** A catalogue entry must come from a source that permits displaying its metadata and playback URL. */
 private data class VideoEntry(
-    val id: String,
-    val title: String,
-    val synopsis: String,
-    val posterUrl: String,
-    val playbackUrl: String,
-    val category: String,
-    val duration: String
+    val id: String, val title: String, val synopsis: String, val posterUrl: String,
+    val playerUrl: String, val category: String, val duration: String
 )
+private data class VideoCategory(val name: String, val slug: String, val count: Int)
 
-/** Intentionally empty until a permitted catalogue/feed endpoint is configured. */
-private object VideoCatalogRepository {
-    fun load(): List<VideoEntry> = emptyList()
+private object AdultEmbedRepository {
+    private suspend fun get(path: String): JSONObject = withContext(Dispatchers.IO) {
+        val connection = (URL(API + path).openConnection() as HttpURLConnection).apply {
+            connectTimeout = 15000; readTimeout = 20000
+            setRequestProperty("Accept", "application/json")
+            setRequestProperty("User-Agent", "PASHXXX-AndroidTV/0.6")
+        }
+        try {
+            val stream = if (connection.responseCode in 200..299) connection.inputStream else connection.errorStream
+            val body = stream.bufferedReader().use { it.readText() }
+            if (connection.responseCode !in 200..299) error("HTTP ${connection.responseCode}")
+            JSONObject(body)
+        } finally { connection.disconnect() }
+    }
+
+    suspend fun categories(): List<VideoCategory> {
+        val json = get("/api/taxonomy/categories/?per_page=100&min_videos=1&ordering=popular")
+        val rows = json.optJSONArray("results") ?: return emptyList()
+        return (0 until rows.length()).mapNotNull { i ->
+            rows.optJSONObject(i)?.let { VideoCategory(it.optString("name"), it.optString("slug"), it.optInt("video_count")) }
+        }
+    }
+
+    suspend fun videos(query: String = "", category: String = "", page: Int = 1): List<VideoEntry> {
+        val params = mutableListOf("orientation=all", "page=$page", "page_size=40", "sort=popular")
+        if (query.isNotBlank()) params += "search=" + java.net.URLEncoder.encode(query, "UTF-8")
+        if (category.isNotBlank()) params += "categories=" + java.net.URLEncoder.encode(category, "UTF-8")
+        val json = get("/api/database/browse/?"+params.joinToString("&"))
+        val rows = json.optJSONArray("results") ?: return emptyList()
+        return (0 until rows.length()).mapNotNull { i ->
+            val item = rows.optJSONObject(i) ?: return@mapNotNull null
+            val id = item.optString("id")
+            if (id.isBlank() || id == "0") return@mapNotNull null
+            val cats = item.optJSONArray("categories")
+            val cat = cats?.optJSONObject(0)?.optString("name").orEmpty().ifBlank { "Видео" }
+            VideoEntry(
+                id = id,
+                title = item.optString("title").ifBlank { "Видео #$id" },
+                synopsis = item.optString("description"),
+                posterUrl = item.optString("thumbnail"),
+                playerUrl = "$API/player/embed/$id/",
+                category = cat,
+                duration = item.optString("duration").ifBlank { "" }
+            )
+        }
+    }
 }
 
-private enum class CatalogueTab { HOME, CATALOGUE, FAVORITES, SETTINGS }
-
-private sealed interface Screen {
-    data object Catalogue : Screen
-    data class Details(val entry: VideoEntry) : Screen
-    data class Player(val entry: VideoEntry) : Screen
+private enum class Tab { HOME, CATALOGUE, FAVORITES, SETTINGS }
+private sealed interface Page {
+    data object Browse : Page
+    data class Details(val video: VideoEntry) : Page
+    data class Player(val video: VideoEntry) : Page
 }
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MaterialTheme(
-                colorScheme = darkColorScheme(
-                    primary = Accent,
-                    background = Background,
-                    surface = Panel,
-                    onPrimary = Color.White,
-                    onBackground = Color.White,
-                    onSurface = Color.White
-                )
-            ) {
+            MaterialTheme(colorScheme = darkColorScheme(primary = Accent, background = Bg, surface = Panel)) {
                 PashxxxApp()
             }
         }
@@ -82,321 +119,209 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun PashxxxApp() {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    var availableUpdate by remember { mutableStateOf<AppUpdate?>(null) }
-    var updateProgress by remember { mutableStateOf<Int?>(null) }
-    var updateError by remember { mutableStateOf<String?>(null) }
-    val updateScope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences("pashxxx_favorites", 0) }
+    var favorites by remember { mutableStateOf(prefs.getStringSet("ids", emptySet())?.toSet() ?: emptySet()) }
+    var page by remember { mutableStateOf<Page>(Page.Browse) }
+    var tab by remember { mutableStateOf(Tab.HOME) }
+    var videos by remember { mutableStateOf<List<VideoEntry>>(emptyList()) }
+    var categories by remember { mutableStateOf<List<VideoCategory>>(emptyList()) }
+    var selectedCategory by remember { mutableStateOf("") }
+    var search by remember { mutableStateOf("") }
+    var loading by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var accepted18 by remember { mutableStateOf(prefs.getBoolean("age_ok", false)) }
+    val scope = rememberCoroutineScope()
+
+    fun loadCatalog(q: String = search, cat: String = selectedCategory) {
+        scope.launch {
+            loading = true; error = null
+            try { videos = AdultEmbedRepository.videos(q, cat) }
+            catch (t: Throwable) { error = "Не удалось загрузить каталог: ${t.message ?: "ошибка сети"}" }
+            finally { loading = false }
+        }
+    }
     LaunchedEffect(Unit) {
-        availableUpdate = runCatching { AppUpdateManager.check(context) }.getOrNull()
+        if (accepted18) {
+            try { categories = AdultEmbedRepository.categories(); loadCatalog() }
+            catch (t: Throwable) { error = "Не удалось подключиться к каталогу: ${t.message}" }
+        }
     }
-    if (availableUpdate != null) {
+    BackHandler(enabled = page !is Page.Browse) {
+        page = when (val p = page) { is Page.Player -> Page.Details(p.video); is Page.Details -> Page.Browse; Page.Browse -> Page.Browse }
+    }
+
+    if (!accepted18) {
         AlertDialog(
-            onDismissRequest = { if (updateProgress == null) availableUpdate = null },
-            title = { Text("Доступно обновление PASHXXX ${availableUpdate!!.versionName}") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Новая версия приложения доступна. APK будет проверен по SHA-256 перед установкой.")
-                    if (updateProgress != null) {
-                        LinearProgressIndicator(progress = { updateProgress!! / 100f }, modifier = Modifier.fillMaxWidth())
-                        Text("Загрузка: ${updateProgress}%")
-                    }
-                    updateError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            onDismissRequest = {},
+            title = { Text("PASHXXX — 18+") },
+            text = { Text("Приложение содержит материалы для совершеннолетних. Подтверди, что тебе исполнилось 18 лет.") },
+            confirmButton = { TextButton(onClick = {
+                accepted18 = true; prefs.edit().putBoolean("age_ok", true).apply()
+                scope.launch {
+                    loading = true
+                    try { categories = AdultEmbedRepository.categories(); videos = AdultEmbedRepository.videos() }
+                    catch (t: Throwable) { error = "Ошибка каталога: ${t.message}" }
+                    finally { loading = false }
                 }
-            },
-            confirmButton = {
-                TextButton(enabled = updateProgress == null, onClick = {
-                    val update = availableUpdate ?: return@TextButton
-                    updateError = null
-                    updateProgress = 0
-                    updateScope.launch {
-                        runCatching {
-                            val installerOpened = AppUpdateManager.downloadAndInstall(context, update) {
-                                updateProgress = it
+            }) { Text("Мне есть 18 лет") } },
+            dismissButton = { TextButton(onClick = { (context as? ComponentActivity)?.finish() }) { Text("Выйти") } }
+        )
+    }
+
+    Surface(Modifier.fillMaxSize(), color = Bg) {
+        when (val current = page) {
+            Page.Browse -> Row(Modifier.fillMaxSize().padding(22.dp)) {
+                Column(
+                    Modifier.width(190.dp).fillMaxHeight().clip(RoundedCornerShape(20.dp))
+                        .background(Panel).padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text("PASHXXX", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Black)
+                    Text("PRIVATE VIDEO LIBRARY", color = Accent, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(18.dp))
+                    NavItem("⌂", "Главная", tab == Tab.HOME) { tab = Tab.HOME; selectedCategory = ""; loadCatalog("", "") }
+                    NavItem("▦", "Каталог", tab == Tab.CATALOGUE) { tab = Tab.CATALOGUE; selectedCategory = ""; loadCatalog("", "") }
+                    NavItem("♡", "Избранное", tab == Tab.FAVORITES) { tab = Tab.FAVORITES }
+                    Spacer(Modifier.weight(1f))
+                    NavItem("⚙", "Настройки", tab == Tab.SETTINGS) { tab = Tab.SETTINGS }
+                    Text("18+  •  PASHXXX", color = Muted, fontSize = 10.sp)
+                }
+                Spacer(Modifier.width(24.dp))
+                Column(Modifier.weight(1f).fillMaxHeight()) {
+                    Text("PASHXXX  /  ${tab.name}", color = Accent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    when (tab) {
+                        Tab.SETTINGS -> {
+                            Text("Настройки", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
+                            Spacer(Modifier.height(20.dp))
+                            Text("Источник каталога: AdultEmbed API", color = Color.White, fontSize = 16.sp)
+                            Text("Плеер: встроенный полноэкранный WebView", color = Muted)
+                            Text("Возрастное ограничение: 18+", color = Muted)
+                            Text("Каталог загружается напрямую из API. Доступность видео зависит от источника.", color = Muted)
+                        }
+                        else -> {
+                            Text(if (tab == Tab.FAVORITES) "Избранное" else if (tab == Tab.HOME) "Главная" else "Каталог видео",
+                                color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
+                            Spacer(Modifier.height(12.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).background(Panel).padding(horizontal = 14.dp, vertical = 12.dp)) {
+                                    if (search.isEmpty()) Text("Поиск по каталогу…", color = Muted)
+                                    BasicTextField(value = search, onValueChange = { search = it },
+                                        textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 15.sp),
+                                        singleLine = true, modifier = Modifier.fillMaxWidth())
+                                }
+                                Spacer(Modifier.width(10.dp))
+                                Button(onClick = { tab = Tab.CATALOGUE; loadCatalog() }) { Text("Найти") }
                             }
-                            updateProgress = null
-                            if (installerOpened) {
-                                availableUpdate = null
+                            Spacer(Modifier.height(12.dp))
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                item { FilterChip(selected = selectedCategory.isEmpty(), onClick = { selectedCategory = ""; tab = Tab.CATALOGUE; loadCatalog() }, label = { Text("Все") }) }
+                                items(categories) { cat ->
+                                    FilterChip(selected = selectedCategory == cat.slug, onClick = {
+                                        selectedCategory = cat.slug; tab = Tab.CATALOGUE; loadCatalog()
+                                    }, label = { Text("${cat.name} · ${cat.count}") })
+                                }
+                            }
+                            Spacer(Modifier.height(10.dp))
+                            if (loading) LinearProgressIndicator(Modifier.fillMaxWidth())
+                            error?.let { Text(it, color = Color(0xFFFF9A82)) }
+                            val shown = if (tab == Tab.FAVORITES) videos.filter { it.id in favorites } else videos
+                            Text("${shown.size} видео", color = Muted, fontSize = 12.sp)
+                            Spacer(Modifier.height(8.dp))
+                            if (!loading && shown.isEmpty() && error == null) {
+                                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    Text(if (tab == Tab.FAVORITES) "Избранное пока пусто" else "По этому запросу ничего не найдено",
+                                        color = Muted, fontSize = 18.sp)
+                                }
                             } else {
-                                updateError = "Разреши установку неизвестных приложений для PASHXXX в настройках Android, вернись сюда и нажми кнопку ещё раз."
+                                LazyVerticalGrid(columns = GridCells.Adaptive(180.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                                    contentPadding = PaddingValues(bottom = 20.dp)) {
+                                    items(shown, key = { it.id }) { video ->
+                                        VideoCard(video) { page = Page.Details(video) }
+                                    }
+                                }
                             }
-                        }.onFailure {
-                            updateError = it.message ?: "Не удалось загрузить обновление"
-                            updateProgress = null
-                        }
-                    }
-                }) { Text(if (updateProgress == null) "Скачать и установить" else "Загрузка…") }
-            },
-            dismissButton = {
-                TextButton(enabled = updateProgress == null, onClick = { availableUpdate = null }) { Text("Позже") }
-            }
-        )
-    }
-    var screen by remember { mutableStateOf<Screen>(Screen.Catalogue) }
-    var selectedTab by remember { mutableStateOf(CatalogueTab.HOME) }
-    val entries = remember { VideoCatalogRepository.load() }
-    BackHandler(enabled = screen !is Screen.Catalogue) {
-        screen = when (screen) {
-            is Screen.Player -> Screen.Details((screen as Screen.Player).entry)
-            is Screen.Details -> Screen.Catalogue
-            Screen.Catalogue -> Screen.Catalogue
-        }
-    }
-    Surface(Modifier.fillMaxSize(), color = Background) {
-        when (val current = screen) {
-            Screen.Catalogue -> CatalogueScreen(
-                entries = entries,
-                selectedTab = selectedTab,
-                onTabSelected = { selectedTab = it },
-                onOpen = { screen = Screen.Details(it) }
-            )
-            is Screen.Details -> DetailsScreen(current.entry,
-                onBack = { screen = Screen.Catalogue },
-                onPlay = { screen = Screen.Player(current.entry) })
-            is Screen.Player -> NativePlayerScreen(current.entry, onBack = { screen = Screen.Details(current.entry) })
-        }
-    }
-}
-
-@Composable
-private fun CatalogueScreen(
-    entries: List<VideoEntry>,
-    selectedTab: CatalogueTab,
-    onTabSelected: (CatalogueTab) -> Unit,
-    onOpen: (VideoEntry) -> Unit
-) {
-    val visibleEntries = if (selectedTab == CatalogueTab.FAVORITES) emptyList() else entries
-    val pageTitle = when (selectedTab) {
-        CatalogueTab.HOME -> "Главная"
-        CatalogueTab.CATALOGUE -> "Каталог видео"
-        CatalogueTab.FAVORITES -> "Избранное"
-        CatalogueTab.SETTINGS -> "Настройки"
-    }
-    Row(Modifier.fillMaxSize().padding(28.dp)) {
-        Column(
-            Modifier.width(205.dp).fillMaxHeight()
-                .clip(RoundedCornerShape(24.dp))
-                .background(Brush.verticalGradient(listOf(Color(0xFF1B2433), Color(0xFF111722))))
-                .border(1.dp, Color.White.copy(alpha = .06f), RoundedCornerShape(24.dp))
-                .padding(22.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text("PASHXXX", fontSize = 27.sp, fontWeight = FontWeight.Black, color = Color.White)
-            Text("PRIVATE ENTERTAINMENT", fontSize = 9.sp, color = Accent, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(22.dp))
-            Text("МЕНЮ", fontSize = 10.sp, color = Muted, fontWeight = FontWeight.Bold)
-            SideItem("⌂", "Главная", selected = selectedTab == CatalogueTab.HOME) { onTabSelected(CatalogueTab.HOME) }
-            SideItem("▦", "Каталог", selected = selectedTab == CatalogueTab.CATALOGUE) { onTabSelected(CatalogueTab.CATALOGUE) }
-            SideItem("♡", "Избранное", selected = selectedTab == CatalogueTab.FAVORITES) { onTabSelected(CatalogueTab.FAVORITES) }
-            Spacer(Modifier.weight(1f))
-            SideItem("⚙", "Настройки", selected = selectedTab == CatalogueTab.SETTINGS) { onTabSelected(CatalogueTab.SETTINGS) }
-            Text("18+  •  PASHXXX", color = Muted, fontSize = 10.sp)
-        }
-        Spacer(Modifier.width(30.dp))
-        Column(Modifier.weight(1f).fillMaxHeight()) {
-            Text("PASHXXX  /  ${pageTitle.uppercase()}", color = Accent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-            Text(pageTitle, color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(22.dp))
-            when (selectedTab) {
-                CatalogueTab.SETTINGS -> SettingsContent()
-                CatalogueTab.HOME, CatalogueTab.CATALOGUE, CatalogueTab.FAVORITES -> {
-                    Box(
-                        Modifier.fillMaxWidth().height(158.dp).clip(RoundedCornerShape(22.dp))
-                            .background(Brush.linearGradient(listOf(Color(0xFF38263A), Color(0xFF202D42), Color(0xFF141C2A))))
-                            .border(1.dp, Color.White.copy(alpha = .07f), RoundedCornerShape(22.dp))
-                            .padding(26.dp)
-                    ) {
-                        Column(Modifier.align(Alignment.CenterStart), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("ТВОЯ ПЕРСОНАЛЬНАЯ ВИДЕОТЕКА", color = Accent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                            Text("Видео. Истории. Впечатления.", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                            Text("Каталог появится после подключения разрешённого источника", color = Color(0xFFCCD2DC), fontSize = 13.sp)
-                        }
-                        Text("P", Modifier.align(Alignment.CenterEnd).padding(end = 18.dp),
-                            color = Color.White.copy(alpha = .05f), fontSize = 116.sp, fontWeight = FontWeight.Black)
-                    }
-                    Spacer(Modifier.height(24.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(if (selectedTab == CatalogueTab.FAVORITES) "Сохранённые видео" else "Каталог видео",
-                            color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.width(10.dp))
-                        Text("${visibleEntries.size} ВИДЕО", color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                    }
-                    Spacer(Modifier.height(14.dp))
-                    if (visibleEntries.isEmpty()) {
-                        val favorite = selectedTab == CatalogueTab.FAVORITES
-                        EmptyCatalogue(
-                            Modifier.weight(1f),
-                            title = if (favorite) "Избранное пока пусто" else "Каталог пока пуст",
-                            description = if (favorite)
-                                "Здесь будут ваши сохранённые видео. Сначала нужно подключить реальный каталог."
-                            else
-                                "Приложение пока не подключено к разрешённому каталогу видео. Поэтому здесь нет фальшивых карточек и нерабочих кнопок. Для наполнения нужны официальный API или медиапоток, разрешающий показ постеров, описаний и воспроизведение."
-                        )
-                    } else {
-                        LazyVerticalGrid(
-                            columns = GridCells.Adaptive(minSize = 185.dp),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp),
-                            contentPadding = PaddingValues(bottom = 20.dp)
-                        ) {
-                            items(visibleEntries, key = { it.id }) { entry -> VideoPosterCard(entry, onClick = { onOpen(entry) }) }
                         }
                     }
                 }
             }
+            is Page.Details -> {
+                val video = current.video
+                Row(Modifier.fillMaxSize().padding(30.dp), horizontalArrangement = Arrangement.spacedBy(28.dp)) {
+                    Column(Modifier.weight(1f)) {
+                        AsyncImage(model = video.posterUrl, contentDescription = video.title,
+                            modifier = Modifier.fillMaxWidth().weight(1f).clip(RoundedCornerShape(18.dp)),
+                            contentScale = ContentScale.Crop)
+                    }
+                    Column(Modifier.weight(1.2f).fillMaxHeight(), verticalArrangement = Arrangement.Center) {
+                        TextButton(onClick = { page = Page.Browse }) { Text("‹ Назад") }
+                        Text(video.category.uppercase(), color = Accent, fontSize = 12.sp)
+                        Text(video.title, color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                        Text(video.duration, color = Muted)
+                        Spacer(Modifier.height(14.dp))
+                        Text(video.synopsis, color = Color(0xFFD2D8E2), fontSize = 15.sp)
+                        Spacer(Modifier.height(20.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Button(onClick = { page = Page.Player(video) }) { Text("▶ Смотреть") }
+                            OutlinedButton(onClick = {
+                                favorites = if (video.id in favorites) favorites - video.id else favorites + video.id
+                                prefs.edit().putStringSet("ids", favorites).apply()
+                            }) { Text(if (video.id in favorites) "♥ В избранном" else "♡ В избранное") }
+                        }
+                    }
+                }
+            }
+            is Page.Player -> EmbeddedPlayer(current.video) { page = Page.Details(current.video) }
         }
     }
 }
 
 @Composable
-private fun SettingsContent() {
-    Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp))
-            .background(Panel).border(1.dp, Color.White.copy(alpha = .06f), RoundedCornerShape(22.dp))
-            .padding(26.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp)
-    ) {
-        Text("ПРИЛОЖЕНИЕ", color = Accent, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-        SettingRow("Название", "PASHXXX")
-        SettingRow("Платформа", "Android TV / Google TV")
-        SettingRow("Плеер", "Встроенный Media3")
-        SettingRow("Каталог", "Ожидает подключения источника")
-        SettingRow("Возрастное ограничение", "18+")
-        HorizontalDivider(color = Color.White.copy(alpha = .08f))
-        Text(
-            "Браузер удалён из основного меню. Приложение будет показывать только реальные материалы из источников, которые разрешают их использование.",
-            color = Muted, fontSize = 13.sp, lineHeight = 19.sp
-        )
-    }
-}
-
-@Composable
-private fun SettingRow(label: String, value: String) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-        Text(label, color = Muted, fontSize = 14.sp)
-        Text(value, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-    }
-}
-
-@Composable
-private fun SideItem(symbol: String, label: String, selected: Boolean, onClick: () -> Unit) {
+private fun NavItem(icon: String, label: String, selected: Boolean, onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
-    val itemBackground by animateColorAsState(
-        targetValue = when {
-            focused -> Color(0xFF3B2631)
-            selected -> Color(0xFF30394A)
-            else -> Color.Transparent
-        },
-        animationSpec = tween(durationMillis = 140),
-        label = "sideItemBackground"
-    )
-    val itemBorder by animateColorAsState(
-        targetValue = if (focused) Accent else if (selected) Accent.copy(alpha = .42f) else Color.Transparent,
-        animationSpec = tween(durationMillis = 140),
-        label = "sideItemBorder"
-    )
-    Row(
-        Modifier.fillMaxWidth()
-            .onFocusChanged { focused = it.isFocused }
-            .clip(RoundedCornerShape(12.dp))
-            .background(itemBackground)
-            .border(if (focused) 2.dp else 1.dp, itemBorder, RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 13.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(symbol, color = if (selected) Accent else Muted, fontSize = 17.sp)
-        Spacer(Modifier.width(12.dp))
-        Text(label, color = if (selected) Color.White else Muted, fontSize = 13.sp,
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium)
+    Row(Modifier.fillMaxWidth().onFocusChanged { focused = it.isFocused }
+        .clip(RoundedCornerShape(10.dp))
+        .background(if (focused || selected) Color(0xFF30394A) else Color.Transparent)
+        .border(if (focused) 2.dp else 1.dp, if (focused) Accent else Color.Transparent, RoundedCornerShape(10.dp))
+        .clickable(onClick = onClick).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(icon, color = Accent); Spacer(Modifier.width(10.dp))
+        Text(label, color = Color.White, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal)
     }
 }
 
 @Composable
-private fun EmptyCatalogue(
-    modifier: Modifier = Modifier,
-    title: String = "Каталог пока пуст",
-    description: String = "Нужен разрешённый источник, который предоставляет постеры, описания и прямые ссылки на воспроизведение. Как только он подключён, здесь появятся настоящие карточки видео."
-) {
-    Box(
-        modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp))
-            .background(Panel).border(1.dp, Color.White.copy(alpha = .055f), RoundedCornerShape(22.dp))
-            .padding(28.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Box(
-                Modifier.size(62.dp).clip(RoundedCornerShape(19.dp))
-                    .background(Brush.linearGradient(listOf(Color(0xFF493044), Color(0xFF26374B)))),
-                contentAlignment = Alignment.Center
-            ) { Text("▶", color = Accent, fontSize = 24.sp) }
-            Text(title, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-            Text(description, color = Muted, fontSize = 13.sp, lineHeight = 19.sp)
+private fun VideoCard(video: VideoEntry, onClick: () -> Unit) {
+    Column(Modifier.clip(RoundedCornerShape(14.dp)).background(Panel).clickable(onClick = onClick)) {
+        AsyncImage(model = video.posterUrl, contentDescription = video.title,
+            modifier = Modifier.fillMaxWidth().aspectRatio(.72f), contentScale = ContentScale.Crop)
+        Column(Modifier.padding(10.dp)) {
+            Text(video.title, color = Color.White, fontWeight = FontWeight.Bold, maxLines = 2, minLines = 2)
+            Text("${video.category}  •  ${video.duration}", color = Muted, fontSize = 10.sp, maxLines = 1)
         }
     }
 }
 
+@SuppressLint("SetJavaScriptEnabled")
 @Composable
-private fun VideoPosterCard(entry: VideoEntry, onClick: () -> Unit) {
-    Column(
-        Modifier.clip(RoundedCornerShape(16.dp)).background(Panel)
-            .clickable(onClick = onClick)
-    ) {
-        Box(Modifier.fillMaxWidth().aspectRatio(.72f).background(Color(0xFF252F40)), contentAlignment = Alignment.Center) {
-            Text("▶", color = Accent, fontSize = 34.sp)
-        }
-        Column(Modifier.padding(12.dp)) {
-            Text(entry.title, color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1)
-            Text(entry.category + "  •  " + entry.duration, color = Muted, fontSize = 11.sp)
-        }
-    }
-}
-
-@Composable
-private fun DetailsScreen(entry: VideoEntry, onBack: () -> Unit, onPlay: () -> Unit) {
-    Column(Modifier.fillMaxSize().padding(30.dp)) {
-        TextButton(onClick = onBack) { Text("‹  Назад", color = Accent) }
-        Spacer(Modifier.height(12.dp))
-        Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(28.dp)) {
-            Box(
-                Modifier.weight(.8f).fillMaxHeight().clip(RoundedCornerShape(22.dp))
-                    .background(Color(0xFF222D40)), contentAlignment = Alignment.Center
-            ) { Text("POSTER", color = Muted, fontWeight = FontWeight.Bold, fontSize = 18.sp) }
-            Column(Modifier.weight(1.2f).fillMaxHeight(), verticalArrangement = Arrangement.Center) {
-                Text(entry.category.uppercase(), color = Accent, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                Text(entry.title, color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(12.dp))
-                Text(entry.duration, color = Muted, fontSize = 13.sp)
-                Spacer(Modifier.height(20.dp))
-                Text("ОПИСАНИЕ СЦЕНЫ", color = Accent, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(8.dp))
-                Text(entry.synopsis, color = Color(0xFFD2D8E2), fontSize = 16.sp, lineHeight = 24.sp)
-                Spacer(Modifier.height(28.dp))
-                Button(onClick = onPlay, colors = ButtonDefaults.buttonColors(containerColor = Accent)) {
-                    Text("▶  Смотреть", color = Color.White, fontWeight = FontWeight.Bold)
-                }
+private fun EmbeddedPlayer(video: VideoEntry, onBack: () -> Unit) {
+    BackHandler { onBack() }
+    Box(Modifier.fillMaxSize().background(Color.Black)) {
+        AndroidView(factory = { ctx ->
+            WebView(ctx).apply {
+                settings.javaScriptEnabled = true
+                settings.domStorageEnabled = true
+                settings.mediaPlaybackRequiresUserGesture = false
+                settings.loadWithOverviewMode = true
+                settings.useWideViewPort = true
+                webChromeClient = WebChromeClient()
+                webViewClient = WebViewClient()
+                loadUrl(video.playerUrl)
             }
+        }, modifier = Modifier.fillMaxSize())
+        TextButton(onClick = onBack, modifier = Modifier.align(Alignment.TopStart).padding(12.dp)) {
+            Text("‹ Назад", color = Color.White)
         }
-    }
-}
-
-@Composable
-private fun NativePlayerScreen(entry: VideoEntry, onBack: () -> Unit) {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val player = remember(entry.playbackUrl) {
-        ExoPlayer.Builder(context).build().apply {
-            setMediaItem(MediaItem.fromUri(entry.playbackUrl))
-            prepare()
-            playWhenReady = true
-        }
-    }
-    DisposableEffect(player) { onDispose { player.release() } }
-    Column(Modifier.fillMaxSize().background(Color.Black)) {
-        TextButton(onClick = onBack) { Text("‹  Назад", color = Color.White) }
-        AndroidView(
-            factory = { ctx -> PlayerView(ctx).apply { this.player = player; useController = true } },
-            update = { it.player = player },
-            modifier = Modifier.fillMaxSize()
-        )
     }
 }
