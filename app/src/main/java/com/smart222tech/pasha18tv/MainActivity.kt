@@ -132,6 +132,7 @@ private fun PashxxxApp() {
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var accepted18 by remember { mutableStateOf(prefs.getBoolean("age_ok", false)) }
+    var language by remember { mutableStateOf(prefs.getString("language", "") ?: "") }
     val scope = rememberCoroutineScope()
 
     fun loadCatalog(q: String = search, cat: String = selectedCategory) {
@@ -152,7 +153,7 @@ private fun PashxxxApp() {
         page = when (val p = page) { is Page.Player -> Page.Details(p.video); is Page.Details -> Page.Browse; Page.Browse -> Page.Browse }
     }
 
-    if (!accepted18) {
+    if (language.isBlank()) {\n        AlertDialog(onDismissRequest = {}, title = { Text("PASHXXX — Выбор языка / Language / Sprache") }, text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) { Text("Выбери язык приложения") ; listOf("Русский" to "ru", "English" to "en", "Deutsch" to "de").forEach { (label, code) -> Button(onClick = { language = code; prefs.edit().putString("language", code).apply() }, modifier = Modifier.fillMaxWidth()) { Text(label) } } } }, confirmButton = {})\n    } else if (!accepted18) {
         AlertDialog(
             onDismissRequest = {},
             title = { Text("PASHXXX — 18+") },
