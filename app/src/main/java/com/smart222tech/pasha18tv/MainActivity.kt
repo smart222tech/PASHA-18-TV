@@ -51,6 +51,7 @@ private data class VideoEntry(
     val playerUrl: String, val category: String, val duration: String
 )
 private data class VideoCategory(val name: String, val slug: String, val count: Int)
+private data class VideoPage(val items: List<VideoEntry>, val hasNext: Boolean, val hasPrevious: Boolean, val total: Int)
 
 private object AdultEmbedRepository {
     private suspend fun get(path: String): JSONObject = withContext(Dispatchers.IO) {
@@ -75,30 +76,22 @@ private object AdultEmbedRepository {
         }
     }
 
-    suspend fun videos(query: String = "", category: String = "", page: Int = 1): List<VideoEntry> {
-        val params = mutableListOf("orientation=all", "page=$page", "page_size=40", "sort=popular")
+    suspend fun videos(query: String = "", category: String = "", page: Int = 1): VideoPage {
+        val params = mutableListOf("orientation=all", "page="+page, "page_size=40", "sort=popular")
         if (query.isNotBlank()) params += "search=" + java.net.URLEncoder.encode(query, "UTF-8")
         if (category.isNotBlank()) params += "categories=" + java.net.URLEncoder.encode(category, "UTF-8")
         val json = get("/api/database/browse/?"+params.joinToString("&"))
-        val rows = json.optJSONArray("results") ?: return emptyList()
-        return (0 until rows.length()).mapNotNull { i ->
+        val rows = json.optJSONArray("results") ?: return VideoPage(emptyList(), false, page > 1, 0)
+        val items = (0 until rows.length()).mapNotNull { i ->
             val item = rows.optJSONObject(i) ?: return@mapNotNull null
             val id = item.optString("id")
             if (id.isBlank() || id == "0") return@mapNotNull null
             val cats = item.optJSONArray("categories")
             val cat = cats?.optJSONObject(0)?.optString("name").orEmpty().ifBlank { "Видео" }
-            VideoEntry(
-                id = id,
-                title = item.optString("title").ifBlank { "Видео #$id" },
-                synopsis = item.optString("description"),
-                posterUrl = item.optString("thumbnail"),
-                playerUrl = "$API/player/embed/$id/",
-                category = cat,
-                duration = item.optString("duration").ifBlank { "" }
-            )
+            VideoEntry(id, item.optString("title").ifBlank { "Видео #"+id }, item.optString("description"), item.optString("thumbnail"), "$API/player/embed/$id/", cat, item.optString("duration"))
         }
-    }
-}
+        return VideoPage(items, !json.isNull("next") && json.optString("next").isNotBlank(), !json.isNull("previous") && json.optString("previous").isNotBlank(), json.optInt("count", items.size))
+    }}
 
 private enum class Tab { HOME, CATALOGUE, FAVORITES, SETTINGS }
 private sealed interface Page {
@@ -126,6 +119,10 @@ private fun PashxxxApp() {
     var page by remember { mutableStateOf<Page>(Page.Browse) }
     var tab by remember { mutableStateOf(Tab.HOME) }
     var videos by remember { mutableStateOf<List<VideoEntry>>(emptyList()) }
+    var catalogPage by remember { mutableIntStateOf(1) }
+    var hasNextPage by remember { mutableStateOf(false) }
+    var hasPreviousPage by remember { mutableStateOf(false) }
+    var totalVideos by remember { mutableIntStateOf(0) }
     var categories by remember { mutableStateOf<List<VideoCategory>>(emptyList()) }
     var selectedCategory by remember { mutableStateOf("") }
     var search by remember { mutableStateOf("") }
@@ -135,11 +132,17 @@ private fun PashxxxApp() {
     var language by remember { mutableStateOf(prefs.getString("language", "") ?: "") }
     val scope = rememberCoroutineScope()
 
-    fun loadCatalog(q: String = search, cat: String = selectedCategory) {
+    fun loadCatalog(q: String = search, cat: String = selectedCategory, requestedPage: Int = 1) {
         scope.launch {
             loading = true; error = null
-            try { videos = AdultEmbedRepository.videos(q, cat) }
-            catch (t: Throwable) { error = "Не удалось загрузить каталог: ${t.message ?: "ошибка сети"}" }
+            try {
+                val result = AdultEmbedRepository.videos(q, cat, requestedPage)
+                videos = result.items
+                catalogPage = requestedPage
+                hasNextPage = result.hasNext
+                hasPreviousPage = result.hasPrevious
+                totalVideos = result.total
+            } catch (t: Throwable) { error = "Не удалось загрузить каталог: " + (t.message ?: "ошибка сети") }
             finally { loading = false }
         }
     }
@@ -230,7 +233,7 @@ private fun PashxxxApp() {
                             if (loading) LinearProgressIndicator(Modifier.fillMaxWidth())
                             error?.let { Text(it, color = Color(0xFFFF9A82)) }
                             val shown = if (tab == Tab.FAVORITES) videos.filter { it.id in favorites } else videos
-                            Text("${shown.size} видео", color = Muted, fontSize = 12.sp)
+                            Text(shown.size.toString() + " видео · страница " + catalogPage + " · всего " + totalVideos, color = Muted, fontSize = 12.sp)
                             Spacer(Modifier.height(8.dp))
                             if (!loading && shown.isEmpty() && error == null) {
                                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
