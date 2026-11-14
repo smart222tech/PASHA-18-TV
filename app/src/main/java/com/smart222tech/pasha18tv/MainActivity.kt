@@ -149,6 +149,7 @@ private fun PashxxxApp() {
     var error by remember { mutableStateOf<String?>(null) }
     var accepted18 by remember { mutableStateOf(prefs.getBoolean("age_ok", false)) }
     var language by remember { mutableStateOf(prefs.getString("language", "") ?: "") }
+    var externalPlayer by remember { mutableStateOf(prefs.getString("external_player", "builtin") ?: "builtin") }
     var menuVisible by remember { mutableStateOf(true) }
     val firstVideoFocusRequester = remember { FocusRequester() }
     val scope = rememberCoroutineScope()
@@ -238,7 +239,13 @@ private fun PashxxxApp() {
                             }
                             Spacer(Modifier.height(16.dp))
                             Text(tr(language, "Воспроизведение", "Playback"), color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                            Text(tr(language, "Для этого источника используется встроенный веб-плеер. VLC и MX Player не могут открыть страницу iframe как обычный видеофайл, поэтому выбор внешнего плеера здесь отключён.", "This source uses an embedded web player. VLC and MX Player cannot open its iframe page as a regular video file, so external-player selection is unavailable for this source."), color = Muted)
+                            Text(tr(language, "Плеер по умолчанию", "Preferred player"), color = Muted)
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                listOf("builtin" to tr(language, "Встроенный плеер", "Built-in player"), "vlc" to "VLC", "mx" to "MX Player").forEach { (key, label) ->
+                                    FilterChip(selected = externalPlayer == key, onClick = { externalPlayer = key; prefs.edit().putString("external_player", key).apply() }, label = { Text(label) })
+                                }
+                            }
+                            Text(tr(language, "Важно: этот источник передаёт страницу встроенного плеера, а не прямую ссылку MP4/HLS. VLC и MX Player могут не принять такую ссылку; в этом случае откроется встроенный плеер.", "Note: this source provides an embedded player page, not a direct MP4/HLS stream. VLC or MX Player may reject it; if so, the built-in player will open."), color = Muted)
                             Spacer(Modifier.height(14.dp))
                             Text(tr(language, "Источник каталога: AdultEmbed API", "Catalogue source: AdultEmbed API"), color = Color.White, fontSize = 16.sp)
                             Text(tr(language, "Возрастное ограничение: 18+", "Age restriction: 18+"), color = Muted)
@@ -283,8 +290,14 @@ if (tab != Tab.FAVORITES) {
                                     contentPadding = PaddingValues(bottom = 20.dp)) {
                                     items(shown, key = { it.id }) { video ->
                                         val isFirst = video.id == shown.firstOrNull()?.id
-                                        VideoCard(video, modifier = if (isFirst) Modifier.focusRequester(firstVideoFocusRequester) else Modifier) {
-                                        page = Page.Player(video)
+                                        VideoCard(video, modifier = if (isFirst) Modifier.focusRequester(firstVideoFocusRequester) else Modifier,
+                                            onCardFocus = { focused -> if (focused) menuVisible = false }) {
+                                        if (externalPlayer == "builtin") page = Page.Player(video)
+                                        else {
+                                            val packageName = if (externalPlayer == "vlc") "org.videolan.vlc" else "com.mxtech.videoplayer.ad"
+                                            val label = if (externalPlayer == "vlc") "VLC" else "MX Player"
+                                            openExternal(context, video, packageName, "$label не найден или не поддерживает страницу источника. Открываю встроенный плеер.") { page = Page.Player(video) }
+                                        }
                                     }
                                     }
                                 }
@@ -335,7 +348,7 @@ private fun NavItem(icon: String, label: String, selected: Boolean, onMoveRight:
                 true
             } else false
         }
-        .onFocusChanged { focused = it.isFocused }
+        .onFocusChanged { focused = it.isFocused; onCardFocus(it.isFocused) }
         .focusable()
         .clip(RoundedCornerShape(10.dp))
         .background(if (focused) FocusLight else if (selected) Color(0xFF30394A) else Color.Transparent)
@@ -347,7 +360,7 @@ private fun NavItem(icon: String, label: String, selected: Boolean, onMoveRight:
 }
 
 @Composable
-private fun VideoCard(video: VideoEntry, modifier: Modifier = Modifier, onClick: () -> Unit) {
+private fun VideoCard(video: VideoEntry, modifier: Modifier = Modifier, onCardFocus: (Boolean) -> Unit = {}, onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
     Column(modifier.onFocusChanged { focused = it.isFocused }
         .focusable()
@@ -365,7 +378,7 @@ private fun VideoCard(video: VideoEntry, modifier: Modifier = Modifier, onClick:
 
 private fun openExternal(context: android.content.Context, video: VideoEntry, packageName: String, fallbackMessage: String, fallback: () -> Unit) {
     try {
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(video.playerUrl)).setPackage(packageName)
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(video.playerUrl)).setPackage(packageName).addCategory(Intent.CATEGORY_BROWSABLE)
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(intent)
     } catch (_: ActivityNotFoundException) {
