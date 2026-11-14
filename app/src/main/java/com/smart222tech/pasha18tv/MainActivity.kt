@@ -313,9 +313,17 @@ private fun EmbeddedPlayer(video: VideoEntry, onBack: () -> Unit) {
             WebView(ctx).apply {
                 settings.javaScriptEnabled = true
                 settings.domStorageEnabled = true
+                settings.databaseEnabled = true
                 settings.mediaPlaybackRequiresUserGesture = false
                 settings.loadWithOverviewMode = true
                 settings.useWideViewPort = true
+                settings.javaScriptCanOpenWindowsAutomatically = true
+                settings.setSupportMultipleWindows(true)
+                settings.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
+                CookieManager.getInstance().setAcceptCookie(true)
+                CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
+                isFocusable = true
+                isFocusableInTouchMode = true
                 webChromeClient = WebChromeClient()
                 webViewClient = WebViewClient()
                 loadUrl(video.playerUrl)
