@@ -36,7 +36,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.foundation.focusable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -384,7 +383,7 @@ private fun NavItem(icon: String, label: String, selected: Boolean, onClick: () 
 @Composable
 private fun VideoCard(video: VideoEntry, modifier: Modifier = Modifier, onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
-    Column(modifier.onFocusChanged { focused = it.isFocused }.focusable().border(if (focused) 4.dp else 1.dp, if (focused) FocusLight else Color(0xFF263246), RoundedCornerShape(14.dp)).clip(RoundedCornerShape(14.dp)).background(if (focused) FocusLight else Color.Black).clickable(onClick = onClick).padding(if (focused) 2.dp else 0.dp)) {
+    Column(modifier.onFocusChanged { focused = it.isFocused }.border(if (focused) 4.dp else 1.dp, if (focused) FocusLight else Color(0xFF263246), RoundedCornerShape(14.dp)).clip(RoundedCornerShape(14.dp)).background(if (focused) FocusLight else Color.Black).clickable(onClick = onClick).padding(if (focused) 2.dp else 0.dp)) {
         AsyncImage(model = video.posterUrl, contentDescription = video.title,
             modifier = Modifier.fillMaxWidth().aspectRatio(.72f), contentScale = ContentScale.Crop)
         Column(Modifier.padding(10.dp)) {
