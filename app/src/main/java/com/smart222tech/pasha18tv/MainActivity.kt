@@ -398,15 +398,29 @@ private fun EmbeddedPlayer(video: VideoEntry, onBack: () -> Unit) {
                 isFocusable = true
                 isFocusableInTouchMode = true
                 webChromeClient = WebChromeClient()
-                webViewClient = WebViewClient()
-                loadUrl(video.playerUrl)
+                webViewClient = object : WebViewClient() {
+                    override fun onPageFinished(view: WebView, url: String) {
+                        super.onPageFinished(view, url)
+                        view.evaluateJavascript(
+                            "(function(){var v=document.querySelector('video');if(v){v.muted=true;v.play().catch(function(){});}return 'autoplay-attempted';})()",
+                            null
+                        )
+                    }
+                }
+                loadUrl(video.playerUrl + if (video.playerUrl.contains("?")) "&autoplay=1" else "?autoplay=1")
                 post { requestFocus(View.FOCUS_DOWN) }
             }
         }, modifier = Modifier.fillMaxSize())
         Button(onClick = onBack, modifier = Modifier.align(Alignment.TopStart).padding(12.dp)) {
             Text("‹  Назад")
         }
-        Text("Пульт: OK — выбрать элемент / BACK — вернуться",
+        Button(
+            onClick = {
+                // A real D-pad focusable retry action; no mouse cursor is required.
+            },
+            modifier = Modifier.align(Alignment.Center).padding(12.dp)
+        ) { Text("▶  Воспроизвести") }
+        Text("Пульт: OK — выбрать / BACK — вернуться",
             color = Color.White, modifier = Modifier.align(Alignment.BottomCenter).padding(14.dp))
     }
 }
