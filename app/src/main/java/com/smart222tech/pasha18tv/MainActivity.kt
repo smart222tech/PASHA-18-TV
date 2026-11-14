@@ -297,7 +297,8 @@ private fun NavItem(icon: String, label: String, selected: Boolean, onClick: () 
 
 @Composable
 private fun VideoCard(video: VideoEntry, onClick: () -> Unit) {
-    Column(Modifier.clip(RoundedCornerShape(14.dp)).background(Panel).clickable(onClick = onClick)) {
+    var focused by remember { mutableStateOf(false) }
+    Column(Modifier.onFocusChanged { focused = it.isFocused }.border(if (focused) 3.dp else 1.dp, if (focused) Accent else Color(0xFF263246), RoundedCornerShape(14.dp)).clip(RoundedCornerShape(14.dp)).background(if (focused) Color(0xFF273449) else Panel).clickable(onClick = onClick).padding(if (focused) 2.dp else 0.dp)) {
         AsyncImage(model = video.posterUrl, contentDescription = video.title,
             modifier = Modifier.fillMaxWidth().aspectRatio(.72f), contentScale = ContentScale.Crop)
         Column(Modifier.padding(10.dp)) {
