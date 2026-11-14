@@ -29,14 +29,14 @@ jobs:
           gradle-version: "8.9"
       - name: Build debug APK
         env:
-          PASHXXX_VERSION_NAME: "0.5.4"
-          PASHXXX_VERSION_CODE: "12"
+          PASHXXX_VERSION_NAME: "0.5.5"
+          PASHXXX_VERSION_CODE: "13"
         run: gradle --no-daemon --stacktrace assembleDebug
       - name: Verify installable APK identity
         env:
           EXPECTED_APPLICATION_ID: "com.smart222tech.pashxxx"
-          EXPECTED_VERSION_NAME: "0.5.4"
-          EXPECTED_VERSION_CODE: "12"
+          EXPECTED_VERSION_NAME: "0.5.5"
+          EXPECTED_VERSION_CODE: "13"
         run: |
           set -euo pipefail
           APK="app/build/outputs/apk/debug/app-debug.apk"
