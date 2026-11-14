@@ -201,11 +201,22 @@ private fun PashxxxApp() {
                     when (tab) {
                         Tab.SETTINGS -> {
                             Text("Настройки", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
-                            Spacer(Modifier.height(20.dp))
+                            Spacer(Modifier.height(18.dp))
+                            Text("Язык интерфейса", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                listOf("Русский" to "ru", "English" to "en", "Deutsch" to "de").forEach { (label, code) ->
+                                    FilterChip(selected = language == code, onClick = { language = code; prefs.edit().putString("language", code).apply() }, label = { Text(label) })
+                                }
+                            }
+                            Spacer(Modifier.height(16.dp))
+                            Text("Воспроизведение", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            Text("Основной режим: встроенный WebView. VLC и MX Player не получают прямую ссылку на видео от источника, поэтому пока не могут быть гарантированным способом воспроизведения.", color = Muted)
+                            Spacer(Modifier.height(14.dp))
                             Text("Источник каталога: AdultEmbed API", color = Color.White, fontSize = 16.sp)
-                            Text("Плеер: встроенный полноэкранный WebView", color = Muted)
                             Text("Возрастное ограничение: 18+", color = Muted)
-                            Text("Каталог загружается напрямую из API. Доступность видео зависит от источника.", color = Muted)
+                            Text("Загружено на странице: " + videos.size + " · всего найдено: " + totalVideos, color = Muted)
+                            Button(onClick = { loadCatalog(search, selectedCategory, 1) }, enabled = !loading) { Text("Обновить каталог") }
+                            OutlinedButton(onClick = { accepted18 = false; prefs.edit().putBoolean("age_ok", false).apply() }) { Text("Сбросить подтверждение возраста") }
                         }
                         else -> {
                             Text(if (tab == Tab.FAVORITES) "Избранное" else if (tab == Tab.HOME) "Главная" else "Каталог видео",
