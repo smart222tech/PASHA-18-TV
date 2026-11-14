@@ -29,3 +29,11 @@ The workflow verifies the APK archive and checks the embedded application ID, ve
 - Minimum Android: API 23
 - Target Android: API 35
 - JDK: 17
+
+
+## Live catalogue (0.5.4)
+
+- Connects to the AdultEmbed public JSON catalogue for live video metadata, posters and category taxonomy.
+- Includes catalogue search, category filters, local favorites and an internal full-screen embedded player.
+- The app applies an 18+ confirmation before requesting catalogue data.
+- Playback uses the provider's embed player; this is not a direct Media3 stream. Availability and embed behavior depend on the provider.
