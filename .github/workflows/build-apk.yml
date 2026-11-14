@@ -29,8 +29,8 @@ jobs:
           gradle-version: "8.9"
       - name: Build debug APK
         env:
-          PASHXXX_VERSION_NAME: "0.5.3"
-          PASHXXX_VERSION_CODE: "11"
+          PASHXXX_VERSION_NAME: "0.5.4"
+          PASHXXX_VERSION_CODE: "12"
         run: gradle --no-daemon --stacktrace assembleDebug
       - name: Verify installable APK identity
         env:
@@ -50,7 +50,7 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: PASHXXX-v0.5.3-debug
+          name: PASHXXX-v0.5.4-debug
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 90
