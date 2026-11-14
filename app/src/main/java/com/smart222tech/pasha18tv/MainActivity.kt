@@ -382,6 +382,11 @@ private fun openExternal(context: android.content.Context, video: VideoEntry, pa
 private fun EmbeddedPlayer(video: VideoEntry, onBack: () -> Unit) {
     BackHandler { onBack() }
     var playerWebView by remember { mutableStateOf<WebView?>(null) }
+    val playFocusRequester = remember { FocusRequester() }
+    LaunchedEffect(Unit) {
+        delay(250)
+        runCatching { playFocusRequester.requestFocus() }
+    }
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         AndroidView(factory = { ctx ->
             WebView(ctx).apply {
@@ -422,8 +427,9 @@ private fun EmbeddedPlayer(video: VideoEntry, onBack: () -> Unit) {
                     "(function(){var v=document.querySelector('video');if(v){v.muted=false;v.play().catch(function(){v.muted=true;v.play().catch(function(){});});}else{var b=document.querySelector('button,[role=button]');if(b)b.click();}})()",
                     null
                 )
+                playerWebView?.requestFocus(View.FOCUS_DOWN)
             },
-            modifier = Modifier.align(Alignment.Center).padding(12.dp)
+            modifier = Modifier.align(Alignment.Center).focusRequester(playFocusRequester).padding(12.dp)
         ) { Text("▶  Воспроизвести") }
         Text("Пульт: OK — выбрать / BACK — вернуться",
             color = Color.White, modifier = Modifier.align(Alignment.BottomCenter).padding(14.dp))
