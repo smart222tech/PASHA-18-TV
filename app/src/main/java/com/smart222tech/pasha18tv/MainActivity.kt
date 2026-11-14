@@ -348,7 +348,7 @@ private fun NavItem(icon: String, label: String, selected: Boolean, onMoveRight:
                 true
             } else false
         }
-        .onFocusChanged { focused = it.isFocused; onCardFocus(it.isFocused) }
+        .onFocusChanged { focused = it.isFocused }
         .focusable()
         .clip(RoundedCornerShape(10.dp))
         .background(if (focused) FocusLight else if (selected) Color(0xFF30394A) else Color.Transparent)
@@ -362,7 +362,7 @@ private fun NavItem(icon: String, label: String, selected: Boolean, onMoveRight:
 @Composable
 private fun VideoCard(video: VideoEntry, modifier: Modifier = Modifier, onCardFocus: (Boolean) -> Unit = {}, onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
-    Column(modifier.onFocusChanged { focused = it.isFocused }
+    Column(modifier.onFocusChanged { focused = it.isFocused; onCardFocus(it.isFocused) }
         .focusable()
         .border(if (focused) 4.dp else 1.dp, if (focused) FocusLight else Color(0xFF263246), RoundedCornerShape(14.dp))
         .clip(RoundedCornerShape(14.dp)).background(if (focused) FocusLight else Color.Black)
